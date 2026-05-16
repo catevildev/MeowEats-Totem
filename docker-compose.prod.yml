@@ -1,0 +1,75 @@
+# Produção: API + MySQL na AWS Lightsail (frontend no Vercel).
+# Uso: docker compose -f docker-compose.prod.yml up -d --build
+#
+# No Lightsail: abra a porta 6005 (API) no firewall.
+# Defina CORS_ORIGIN no .env (URLs do Vercel, separadas por vírgula).
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: meoweats-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_DATABASE: meoweats
+      MYSQL_USER: meoweats
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:6010:3306"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-umeoweats",
+          "-p${MYSQL_PASSWORD}",
+          "--silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: meoweats-api
+    restart: unless-stopped
+    ports:
+      - "6005:6005"
+    env_file:
+      - .env
+    environment:
+      PORT: "6005"
+      DATABASE_URL: mysql://meoweats:${MYSQL_PASSWORD}@mysql:3306/meoweats
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:6005/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+
+volumes:
+  mysql_data:
+  uploads_data:

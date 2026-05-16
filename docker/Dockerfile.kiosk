@@ -1,0 +1,19 @@
+FROM node:20-bookworm-slim
+
+RUN corepack enable && corepack prepare pnpm@10 --activate
+
+WORKDIR /app
+
+COPY .npmrc package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+RUN printf "minimum-release-age=0\n" >> .npmrc
+COPY scripts ./scripts
+COPY lib ./lib
+COPY attached_assets ./attached_assets
+COPY artifacts/kiosk ./artifacts/kiosk
+
+RUN pnpm install --frozen-lockfile --filter @workspace/kiosk...
+
+WORKDIR /app/artifacts/kiosk
+
+EXPOSE 6001
+CMD ["pnpm", "exec", "vite", "--config", "vite.config.ts", "--host", "0.0.0.0"]

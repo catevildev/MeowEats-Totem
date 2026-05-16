@@ -1,0 +1,98 @@
+# Stack local: MySQL + API + Kiosk (Vite).
+# Host: MySQL 6010, API 6005, UI 6001 (intervalo 6000–6020).
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: meoweats-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: meoweats_root
+      MYSQL_DATABASE: meoweats
+      MYSQL_USER: meoweats
+      MYSQL_PASSWORD: meoweats
+    ports:
+      - "6010:3306"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-umeoweats",
+          "-pmeoweats",
+          "--silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: meoweats-api
+    restart: unless-stopped
+    ports:
+      - "6005:6005"
+    volumes:
+      - ./uploads:/app/uploads
+    env_file:
+      - .env
+    environment:
+      PORT: "6005"
+      DATABASE_URL: mysql://meoweats:meoweats@mysql:3306/meoweats
+      # IMAGE_STORAGE=firebase
+      # FIREBASE_STORAGE_BUCKET=seu-projeto.appspot.com
+      # GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase-sa.json
+    # Descomente para Firebase (monte o JSON da conta de serviço):
+    # volumes:
+    #   - ./secrets/firebase-service-account.json:/run/secrets/firebase-sa.json:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:6005/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+
+  kiosk:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.kiosk
+    container_name: meoweats-kiosk
+    restart: unless-stopped
+    ports:
+      - "2302:6001"
+    environment:
+      PORT: "6001"
+      BASE_PATH: /
+      API_URL: http://api:6005
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:6001/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 25
+      start_period: 120s

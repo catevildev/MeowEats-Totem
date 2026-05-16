@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "corepack enable && corepack prepare pnpm@10 --activate && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/kiosk run build",
+  "outputDirectory": "artifacts/kiosk/dist/public",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

@@ -1,0 +1,637 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Restaurant Self-Service Kiosk API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: categorias
+    description: Product categories
+  - name: produtos
+    description: Products
+  - name: pedidos
+    description: Orders
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /categorias:
+    get:
+      operationId: listarCategorias
+      tags: [categorias]
+      summary: List all categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Categoria"
+    post:
+      operationId: criarCategoria
+      tags: [categorias]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarCategoriaInput"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Categoria"
+
+  /categorias/{id}:
+    put:
+      operationId: atualizarCategoria
+      tags: [categorias]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarCategoriaInput"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Categoria"
+    delete:
+      operationId: excluirCategoria
+      tags: [categorias]
+      summary: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Category deleted
+
+  /produtos:
+    get:
+      operationId: listarProdutos
+      tags: [produtos]
+      summary: List all products
+      parameters:
+        - name: categoria
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: ativo
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Produto"
+    post:
+      operationId: criarProduto
+      tags: [produtos]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarProdutoInput"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Produto"
+
+  /produtos/{id}:
+    get:
+      operationId: buscarProduto
+      tags: [produtos]
+      summary: Get a product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Produto"
+        "404":
+          description: Product not found
+    put:
+      operationId: atualizarProduto
+      tags: [produtos]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarProdutoInput"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Produto"
+    delete:
+      operationId: excluirProduto
+      tags: [produtos]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Product deleted
+
+  /pedidos:
+    get:
+      operationId: listarPedidos
+      tags: [pedidos]
+      summary: List all orders
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [novo, em_preparo, pronto, entregue, cancelado]
+        - name: data
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pedido"
+    post:
+      operationId: criarPedido
+      tags: [pedidos]
+      summary: Create a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarPedidoInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pedido"
+
+  /pedidos/{id}:
+    get:
+      operationId: buscarPedido
+      tags: [pedidos]
+      summary: Get an order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pedido"
+
+  /pedidos/{id}/status:
+    patch:
+      operationId: atualizarStatusPedido
+      tags: [pedidos]
+      summary: Update order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtualizarStatusInput"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pedido"
+
+  /relatorios/vendas:
+    get:
+      operationId: relatorioVendas
+      tags: [pedidos]
+      summary: Sales report
+      parameters:
+        - name: data
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sales report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelatorioVendas"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Categoria:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        icone:
+          type: string
+          nullable: true
+        imagemUrl:
+          type: string
+          nullable: true
+        ordem:
+          type: integer
+      required:
+        - id
+        - nome
+        - ordem
+
+    CriarCategoriaInput:
+      type: object
+      properties:
+        nome:
+          type: string
+        icone:
+          type: string
+          nullable: true
+        imagemUrl:
+          type: string
+          nullable: true
+        ordem:
+          type: integer
+      required:
+        - nome
+        - ordem
+
+    Produto:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+        preco:
+          type: number
+        ncm:
+          type: string
+        cfop:
+          type: string
+        origem:
+          type: string
+          enum: ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
+        cest:
+          type: string
+          nullable: true
+        categoriaId:
+          type: integer
+        imagem:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+        extras:
+          type: array
+          items:
+            $ref: "#/components/schemas/Extra"
+        categoria:
+          $ref: "#/components/schemas/Categoria"
+          nullable: true
+      required:
+        - id
+        - nome
+        - preco
+        - ncm
+        - cfop
+        - origem
+        - categoriaId
+        - ativo
+        - extras
+
+    Extra:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        preco:
+          type: number
+        tipo:
+          type: string
+          enum: [adicional, remocao, tamanho]
+      required:
+        - id
+        - nome
+        - preco
+        - tipo
+
+    CriarProdutoInput:
+      type: object
+      properties:
+        nome:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+        preco:
+          type: number
+        ncm:
+          type: string
+        cfop:
+          type: string
+        origem:
+          type: string
+          enum: ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
+        cest:
+          type: string
+          nullable: true
+        categoriaId:
+          type: integer
+        imagem:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+        extras:
+          type: array
+          items:
+            $ref: "#/components/schemas/CriarExtraInput"
+      required:
+        - nome
+        - preco
+        - ncm
+        - cfop
+        - origem
+        - categoriaId
+        - ativo
+
+    CriarExtraInput:
+      type: object
+      properties:
+        nome:
+          type: string
+        preco:
+          type: number
+        tipo:
+          type: string
+          enum: [adicional, remocao, tamanho]
+      required:
+        - nome
+        - preco
+        - tipo
+
+    ItemPedido:
+      type: object
+      properties:
+        id:
+          type: integer
+        pedidoId:
+          type: integer
+        produtoId:
+          type: integer
+        quantidade:
+          type: integer
+        preco:
+          type: number
+        observacoes:
+          type: string
+          nullable: true
+        extrasIds:
+          type: array
+          items:
+            type: integer
+        produto:
+          $ref: "#/components/schemas/Produto"
+          nullable: true
+      required:
+        - id
+        - pedidoId
+        - produtoId
+        - quantidade
+        - preco
+        - extrasIds
+
+    CriarItemPedidoInput:
+      type: object
+      properties:
+        produtoId:
+          type: integer
+        quantidade:
+          type: integer
+        observacoes:
+          type: string
+          nullable: true
+        extrasIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - produtoId
+        - quantidade
+        - extrasIds
+
+    Pedido:
+      type: object
+      properties:
+        id:
+          type: integer
+        numero:
+          type: string
+        status:
+          type: string
+          enum: [novo, em_preparo, pronto, entregue, cancelado]
+        total:
+          type: number
+        tipoPedido:
+          type: string
+          enum: [comer_aqui, para_viagem]
+        formaPagamento:
+          type: string
+          enum: [credito, debito, pix, nfc]
+          nullable: true
+        criadoEm:
+          type: string
+        itens:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemPedido"
+      required:
+        - id
+        - numero
+        - status
+        - total
+        - tipoPedido
+        - criadoEm
+        - itens
+
+    CriarPedidoInput:
+      type: object
+      properties:
+        tipoPedido:
+          type: string
+          enum: [comer_aqui, para_viagem]
+        formaPagamento:
+          type: string
+          enum: [credito, debito, pix, nfc]
+        itens:
+          type: array
+          items:
+            $ref: "#/components/schemas/CriarItemPedidoInput"
+      required:
+        - tipoPedido
+        - formaPagamento
+        - itens
+
+    AtualizarStatusInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [novo, em_preparo, pronto, entregue, cancelado]
+      required:
+        - status
+
+    RelatorioVendas:
+      type: object
+      properties:
+        totalVendas:
+          type: number
+        totalPedidos:
+          type: integer
+        ticketMedio:
+          type: number
+        produtosMaisVendidos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProdutoVendido"
+        vendasPorHora:
+          type: array
+          items:
+            $ref: "#/components/schemas/VendaPorHora"
+      required:
+        - totalVendas
+        - totalPedidos
+        - ticketMedio
+        - produtosMaisVendidos
+        - vendasPorHora
+
+    ProdutoVendido:
+      type: object
+      properties:
+        produto:
+          type: string
+        quantidade:
+          type: integer
+        total:
+          type: number
+      required:
+        - produto
+        - quantidade
+        - total
+
+    VendaPorHora:
+      type: object
+      properties:
+        hora:
+          type: string
+        total:
+          type: number
+        quantidade:
+          type: integer
+      required:
+        - hora
+        - total
+        - quantidade
