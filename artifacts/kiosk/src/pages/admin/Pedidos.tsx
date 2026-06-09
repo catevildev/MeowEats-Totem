@@ -3,7 +3,9 @@ import { AdminLayout } from "./AdminLayout";
 import { formatCurrency } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
-
+import * as React from "react";
+import { useClientTable } from "@/hooks/useClientTable";
+import { TablePagination, TableToolbar } from "@/components/TablePagination";
 export default function AdminPedidos() {
   const { data: pedidos, isLoading } = useListarPedidos();
 
@@ -22,18 +24,61 @@ export default function AdminPedidos() {
     return status.replace('_', ' ').toUpperCase();
   };
 
+  const sortedPedidos = React.useMemo(() => {
+    if (!pedidos) return [];
+    return [...pedidos].sort((a,b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime());
+  }, [pedidos]);
+
+  const {
+    paginatedData,
+    searchQuery,
+    setSearchQuery,
+    dateFilter,
+    setDateFilter,
+    currentPage,
+    setPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    totalItems,
+  } = useClientTable({
+    data: sortedPedidos,
+    filterFn: (item, query, dFilter) => {
+      if (dFilter) {
+        const itemDate = new Date(item.criadoEm).toISOString().split('T')[0];
+        if (itemDate !== dFilter) return false;
+      }
+      
+      const q = query.toLowerCase();
+      if (!q) return true;
+      if (item.numero?.toLowerCase().includes(q)) return true;
+      if (item.itens?.some((i: any) => i.produto?.nome?.toLowerCase().includes(q))) return true;
+      return false;
+    }
+  });
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Histórico de Pedidos</h1>
-          <p className="text-muted-foreground">Acompanhe todos os pedidos realizados</p>
+          <p className="text-muted-foreground">
+            Histórico completo — o Dashboard mostra apenas o resumo do dia atual
+          </p>
         </div>
 
         {isLoading ? (
           <LoadingSpinner />
         ) : (
-          <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+          <div className="space-y-4">
+            <TableToolbar 
+              searchQuery={searchQuery} 
+              setSearchQuery={setSearchQuery} 
+              dateFilter={dateFilter}
+              setDateFilter={setDateFilter}
+              searchPlaceholder="Buscar por número do pedido ou produto..." 
+            />
+            <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
@@ -47,8 +92,15 @@ export default function AdminPedidos() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {pedidos?.sort((a,b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()).map((p) => (
-                    <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                  {paginatedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        {searchQuery ? "Nenhum pedido encontrado na busca" : "Nenhum pedido registrado"}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedData.map((p) => (
+                      <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                       <td className="p-4 font-display font-bold text-lg">{p.numero}</td>
                       <td className="p-4 text-muted-foreground">
                         {format(new Date(p.criadoEm), "dd/MM/yyyy HH:mm")}
@@ -70,10 +122,21 @@ export default function AdminPedidos() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+            
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              setPage={setPage}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+              totalItems={totalItems}
+            />
+          </div>
           </div>
         )}
       </div>

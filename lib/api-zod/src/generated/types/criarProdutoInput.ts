@@ -6,16 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CriarExtraInput } from "./criarExtraInput";
-import type { CriarProdutoInputOrigem } from "./criarProdutoInputOrigem";
 
 export interface CriarProdutoInput {
   nome: string;
   descricao?: string | null;
   preco: number;
-  ncm: string;
-  cfop: string;
-  origem: CriarProdutoInputOrigem;
-  cest?: string | null;
   categoriaId: number;
   imagem?: string | null;
   ativo: boolean;

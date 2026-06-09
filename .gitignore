@@ -17,3 +17,9 @@ node_modules
 # Local
 .cache/
 .local/
+
+# Uploads (fotos de categoria/produto) — persistidos em ./uploads com Docker
+uploads/
+
+# Dados MySQL locais (se usar bind mount em vez do volume nomeado)
+data/

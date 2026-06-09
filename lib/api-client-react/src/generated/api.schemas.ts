@@ -24,20 +24,6 @@ export interface CriarCategoriaInput {
   ordem: number;
 }
 
-export type ProdutoOrigem = (typeof ProdutoOrigem)[keyof typeof ProdutoOrigem];
-
-export const ProdutoOrigem = {
-  NUMBER_0: "0",
-  NUMBER_1: "1",
-  NUMBER_2: "2",
-  NUMBER_3: "3",
-  NUMBER_4: "4",
-  NUMBER_5: "5",
-  NUMBER_6: "6",
-  NUMBER_7: "7",
-  NUMBER_8: "8",
-} as const;
-
 export type ExtraTipo = (typeof ExtraTipo)[keyof typeof ExtraTipo];
 
 export const ExtraTipo = {
@@ -46,11 +32,28 @@ export const ExtraTipo = {
   tamanho: "tamanho",
 } as const;
 
+export type ExtraModoSelecao =
+  (typeof ExtraModoSelecao)[keyof typeof ExtraModoSelecao];
+
+export const ExtraModoSelecao = {
+  multipla: "multipla",
+  unica: "unica",
+  sim_nao: "sim_nao",
+} as const;
+
 export interface Extra {
   id: number;
   nome: string;
   preco: number;
   tipo: ExtraTipo;
+  grupoTitulo: string;
+  modoSelecao: ExtraModoSelecao;
+  maxSelecoes: number;
+  obrigatorio: boolean;
+  ordemGrupo: number;
+  ordemItem: number;
+  /** URL da foto da opção no totem (/api/uploads/...) */
+  imagem?: string | null;
 }
 
 export interface Produto {
@@ -58,31 +61,12 @@ export interface Produto {
   nome: string;
   descricao?: string | null;
   preco: number;
-  ncm: string;
-  cfop: string;
-  origem: ProdutoOrigem;
-  cest?: string | null;
   categoriaId: number;
   imagem?: string | null;
   ativo: boolean;
   extras: Extra[];
   categoria?: Categoria | null;
 }
-
-export type CriarProdutoInputOrigem =
-  (typeof CriarProdutoInputOrigem)[keyof typeof CriarProdutoInputOrigem];
-
-export const CriarProdutoInputOrigem = {
-  NUMBER_0: "0",
-  NUMBER_1: "1",
-  NUMBER_2: "2",
-  NUMBER_3: "3",
-  NUMBER_4: "4",
-  NUMBER_5: "5",
-  NUMBER_6: "6",
-  NUMBER_7: "7",
-  NUMBER_8: "8",
-} as const;
 
 export type CriarExtraInputTipo =
   (typeof CriarExtraInputTipo)[keyof typeof CriarExtraInputTipo];
@@ -93,20 +77,32 @@ export const CriarExtraInputTipo = {
   tamanho: "tamanho",
 } as const;
 
+export type CriarExtraInputModoSelecao =
+  (typeof CriarExtraInputModoSelecao)[keyof typeof CriarExtraInputModoSelecao];
+
+export const CriarExtraInputModoSelecao = {
+  multipla: "multipla",
+  unica: "unica",
+  sim_nao: "sim_nao",
+} as const;
+
 export interface CriarExtraInput {
   nome: string;
   preco: number;
   tipo: CriarExtraInputTipo;
+  grupoTitulo?: string;
+  modoSelecao?: CriarExtraInputModoSelecao;
+  maxSelecoes?: number;
+  obrigatorio?: boolean;
+  ordemGrupo?: number;
+  ordemItem?: number;
+  imagem?: string | null;
 }
 
 export interface CriarProdutoInput {
   nome: string;
   descricao?: string | null;
   preco: number;
-  ncm: string;
-  cfop: string;
-  origem: CriarProdutoInputOrigem;
-  cest?: string | null;
   categoriaId: number;
   imagem?: string | null;
   ativo: boolean;
@@ -230,6 +226,61 @@ export interface RelatorioVendas {
   vendasPorHora: VendaPorHora[];
 }
 
+export type ImpressoraTipoConexao =
+  (typeof ImpressoraTipoConexao)[keyof typeof ImpressoraTipoConexao];
+
+export const ImpressoraTipoConexao = {
+  rede: "rede",
+  usb: "usb",
+} as const;
+
+export type ImpressoraLarguraPapel =
+  (typeof ImpressoraLarguraPapel)[keyof typeof ImpressoraLarguraPapel];
+
+export const ImpressoraLarguraPapel = {
+  "80mm": "80mm",
+  "58mm": "58mm",
+} as const;
+
+export interface Impressora {
+  id: number;
+  nome: string;
+  tipoConexao: ImpressoraTipoConexao;
+  endereco: string;
+  larguraPapel: ImpressoraLarguraPapel;
+  margemEsquerda: number;
+  margemDireita: number;
+  ativa: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export type CriarImpressoraInputTipoConexao =
+  (typeof CriarImpressoraInputTipoConexao)[keyof typeof CriarImpressoraInputTipoConexao];
+
+export const CriarImpressoraInputTipoConexao = {
+  rede: "rede",
+  usb: "usb",
+} as const;
+
+export type CriarImpressoraInputLarguraPapel =
+  (typeof CriarImpressoraInputLarguraPapel)[keyof typeof CriarImpressoraInputLarguraPapel];
+
+export const CriarImpressoraInputLarguraPapel = {
+  "80mm": "80mm",
+  "58mm": "58mm",
+} as const;
+
+export interface CriarImpressoraInput {
+  nome: string;
+  tipoConexao?: CriarImpressoraInputTipoConexao;
+  endereco: string;
+  larguraPapel?: CriarImpressoraInputLarguraPapel;
+  margemEsquerda?: number;
+  margemDireita?: number;
+  ativa?: boolean;
+}
+
 export type ListarProdutosParams = {
   categoria?: number;
   ativo?: boolean;
@@ -250,6 +301,12 @@ export const ListarPedidosStatus = {
   entregue: "entregue",
   cancelado: "cancelado",
 } as const;
+
+export type EmitirNfceBodyPayload = { [key: string]: unknown };
+
+export type EmitirNfceBody = {
+  payload?: EmitirNfceBodyPayload;
+};
 
 export type RelatorioVendasParams = {
   data?: string;

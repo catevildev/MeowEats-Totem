@@ -5,6 +5,7 @@
  * Restaurant Self-Service Kiosk API
  * OpenAPI spec version: 0.1.0
  */
+import type { ExtraModoSelecao } from "./extraModoSelecao";
 import type { ExtraTipo } from "./extraTipo";
 
 export interface Extra {
@@ -12,4 +13,12 @@ export interface Extra {
   nome: string;
   preco: number;
   tipo: ExtraTipo;
+  grupoTitulo: string;
+  modoSelecao: ExtraModoSelecao;
+  maxSelecoes: number;
+  obrigatorio: boolean;
+  ordemGrupo: number;
+  ordemItem: number;
+  /** URL da foto da opção no totem (/api/uploads/...) */
+  imagem?: string | null;
 }

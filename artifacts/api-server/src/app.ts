@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { getUploadsDir } from "./lib/uploads-dir";
 
 const app: Express = express();
 
@@ -25,23 +26,13 @@ app.use(
     },
   }),
 );
-const corsOrigins = process.env.CORS_ORIGIN?.split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
-app.use(
-  cors(
-    corsOrigins?.length
-      ? { origin: corsOrigins, credentials: true }
-      : undefined,
-  ),
-);
-import path from "path";
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static uploads
-app.use("/api/uploads", express.static(path.join(process.cwd(), "uploads")));
+// Serve static uploads (mesma pasta que upload.ts grava)
+app.use("/api/uploads", express.static(getUploadsDir()));
 
 app.use("/api", router);
 

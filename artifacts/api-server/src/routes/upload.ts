@@ -1,11 +1,30 @@
 import { Router } from "express";
 import multer from "multer";
-import { getImageStorage } from "../lib/image-storage";
+import path from "path";
+import crypto from "crypto";
+import fs from "fs";
+import { getUploadsDir } from "../lib/uploads-dir";
 
 const router = Router();
 
+const uploadDir = getUploadsDir();
+
+const storage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename(_req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const id = crypto.randomBytes(8).toString("hex");
+    cb(null, `${id}${ext}`);
+  },
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage,
   limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (!file.mimetype.startsWith("image/")) {
@@ -16,25 +35,18 @@ const upload = multer({
   },
 });
 
-router.post("/upload", upload.single("imagem"), async (req, res) => {
+router.post("/upload", upload.single("imagem"), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "Nenhuma imagem foi enviada." });
+      res.status(400).json({ error: "Nenhuma imagem foi enviada." });
+      return;
     }
 
-    const storage = getImageStorage();
-    const { url } = await storage.upload(req.file.buffer, {
-      mimeType: req.file.mimetype,
-      originalName: req.file.originalname,
-      folder: "categorias",
-    });
-
+    const url = `/api/uploads/${req.file.filename}`;
     res.status(201).json({ url });
   } catch (err) {
     req.log?.error({ err }, "Error uploading file");
-    const message =
-      err instanceof Error ? err.message : "Erro interno no upload";
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: "Erro interno no upload" });
   }
 });
 

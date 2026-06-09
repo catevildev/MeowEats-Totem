@@ -11,6 +11,9 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminCategorias from "@/pages/admin/Categorias";
 import AdminProdutos from "@/pages/admin/Produtos";
 import AdminPedidos from "@/pages/admin/Pedidos";
+import AdminPagamentos from "@/pages/admin/Pagamentos";
+import AdminTefConfig from "@/pages/admin/TefConfig";
+import AdminImpressoras from "@/pages/admin/Impressoras";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +39,9 @@ function Router() {
       <Route path="/admin/categorias" component={AdminCategorias} />
       <Route path="/admin/produtos" component={AdminProdutos} />
       <Route path="/admin/pedidos" component={AdminPedidos} />
+      <Route path="/admin/pagamentos" component={AdminPagamentos} />
+      <Route path="/admin/tef" component={AdminTefConfig} />
+      <Route path="/admin/impressoras" component={AdminImpressoras} />
       
       <Route component={NotFound} />
     </Switch>

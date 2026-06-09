@@ -78,10 +78,6 @@ export const ListarProdutosResponseItem = zod.object({
   nome: zod.string(),
   descricao: zod.string().nullish(),
   preco: zod.number(),
-  ncm: zod.string(),
-  cfop: zod.string(),
-  origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-  cest: zod.string().nullish(),
   categoriaId: zod.number(),
   imagem: zod.string().nullish(),
   ativo: zod.boolean(),
@@ -91,6 +87,16 @@ export const ListarProdutosResponseItem = zod.object({
       nome: zod.string(),
       preco: zod.number(),
       tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+      grupoTitulo: zod.string(),
+      modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]),
+      maxSelecoes: zod.number(),
+      obrigatorio: zod.boolean(),
+      ordemGrupo: zod.number(),
+      ordemItem: zod.number(),
+      imagem: zod
+        .string()
+        .nullish()
+        .describe("URL da foto da opção no totem (\/api\/uploads\/...)"),
     }),
   ),
   categoria: zod
@@ -112,10 +118,6 @@ export const CriarProdutoBody = zod.object({
   nome: zod.string(),
   descricao: zod.string().nullish(),
   preco: zod.number(),
-  ncm: zod.string(),
-  cfop: zod.string(),
-  origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-  cest: zod.string().nullish(),
   categoriaId: zod.number(),
   imagem: zod.string().nullish(),
   ativo: zod.boolean(),
@@ -125,6 +127,13 @@ export const CriarProdutoBody = zod.object({
         nome: zod.string(),
         preco: zod.number(),
         tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+        grupoTitulo: zod.string().optional(),
+        modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]).optional(),
+        maxSelecoes: zod.number().optional(),
+        obrigatorio: zod.boolean().optional(),
+        ordemGrupo: zod.number().optional(),
+        ordemItem: zod.number().optional(),
+        imagem: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -142,10 +151,6 @@ export const BuscarProdutoResponse = zod.object({
   nome: zod.string(),
   descricao: zod.string().nullish(),
   preco: zod.number(),
-  ncm: zod.string(),
-  cfop: zod.string(),
-  origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-  cest: zod.string().nullish(),
   categoriaId: zod.number(),
   imagem: zod.string().nullish(),
   ativo: zod.boolean(),
@@ -155,6 +160,16 @@ export const BuscarProdutoResponse = zod.object({
       nome: zod.string(),
       preco: zod.number(),
       tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+      grupoTitulo: zod.string(),
+      modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]),
+      maxSelecoes: zod.number(),
+      obrigatorio: zod.boolean(),
+      ordemGrupo: zod.number(),
+      ordemItem: zod.number(),
+      imagem: zod
+        .string()
+        .nullish()
+        .describe("URL da foto da opção no totem (\/api\/uploads\/...)"),
     }),
   ),
   categoria: zod
@@ -179,10 +194,6 @@ export const AtualizarProdutoBody = zod.object({
   nome: zod.string(),
   descricao: zod.string().nullish(),
   preco: zod.number(),
-  ncm: zod.string(),
-  cfop: zod.string(),
-  origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-  cest: zod.string().nullish(),
   categoriaId: zod.number(),
   imagem: zod.string().nullish(),
   ativo: zod.boolean(),
@@ -192,6 +203,13 @@ export const AtualizarProdutoBody = zod.object({
         nome: zod.string(),
         preco: zod.number(),
         tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+        grupoTitulo: zod.string().optional(),
+        modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]).optional(),
+        maxSelecoes: zod.number().optional(),
+        obrigatorio: zod.boolean().optional(),
+        ordemGrupo: zod.number().optional(),
+        ordemItem: zod.number().optional(),
+        imagem: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -202,10 +220,6 @@ export const AtualizarProdutoResponse = zod.object({
   nome: zod.string(),
   descricao: zod.string().nullish(),
   preco: zod.number(),
-  ncm: zod.string(),
-  cfop: zod.string(),
-  origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-  cest: zod.string().nullish(),
   categoriaId: zod.number(),
   imagem: zod.string().nullish(),
   ativo: zod.boolean(),
@@ -215,6 +229,16 @@ export const AtualizarProdutoResponse = zod.object({
       nome: zod.string(),
       preco: zod.number(),
       tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+      grupoTitulo: zod.string(),
+      modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]),
+      maxSelecoes: zod.number(),
+      obrigatorio: zod.boolean(),
+      ordemGrupo: zod.number(),
+      ordemItem: zod.number(),
+      imagem: zod
+        .string()
+        .nullish()
+        .describe("URL da foto da opção no totem (\/api\/uploads\/...)"),
     }),
   ),
   categoria: zod
@@ -268,10 +292,6 @@ export const ListarPedidosResponseItem = zod.object({
           nome: zod.string(),
           descricao: zod.string().nullish(),
           preco: zod.number(),
-          ncm: zod.string(),
-          cfop: zod.string(),
-          origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-          cest: zod.string().nullish(),
           categoriaId: zod.number(),
           imagem: zod.string().nullish(),
           ativo: zod.boolean(),
@@ -281,6 +301,18 @@ export const ListarPedidosResponseItem = zod.object({
               nome: zod.string(),
               preco: zod.number(),
               tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+              grupoTitulo: zod.string(),
+              modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]),
+              maxSelecoes: zod.number(),
+              obrigatorio: zod.boolean(),
+              ordemGrupo: zod.number(),
+              ordemItem: zod.number(),
+              imagem: zod
+                .string()
+                .nullish()
+                .describe(
+                  "URL da foto da opção no totem (\/api\/uploads\/...)",
+                ),
             }),
           ),
           categoria: zod
@@ -345,10 +377,6 @@ export const BuscarPedidoResponse = zod.object({
           nome: zod.string(),
           descricao: zod.string().nullish(),
           preco: zod.number(),
-          ncm: zod.string(),
-          cfop: zod.string(),
-          origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-          cest: zod.string().nullish(),
           categoriaId: zod.number(),
           imagem: zod.string().nullish(),
           ativo: zod.boolean(),
@@ -358,6 +386,18 @@ export const BuscarPedidoResponse = zod.object({
               nome: zod.string(),
               preco: zod.number(),
               tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+              grupoTitulo: zod.string(),
+              modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]),
+              maxSelecoes: zod.number(),
+              obrigatorio: zod.boolean(),
+              ordemGrupo: zod.number(),
+              ordemItem: zod.number(),
+              imagem: zod
+                .string()
+                .nullish()
+                .describe(
+                  "URL da foto da opção no totem (\/api\/uploads\/...)",
+                ),
             }),
           ),
           categoria: zod
@@ -373,6 +413,24 @@ export const BuscarPedidoResponse = zod.object({
         .nullish(),
     }),
   ),
+});
+
+/**
+ * @summary Re-print an order receipt
+ */
+export const ImprimirPedidoParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Emitir NFC-e para um pedido
+ */
+export const EmitirNfceParams = zod.object({
+  pedidoId: zod.coerce.number(),
+});
+
+export const EmitirNfceBody = zod.object({
+  payload: zod.object({}).passthrough().optional(),
 });
 
 /**
@@ -409,10 +467,6 @@ export const AtualizarStatusPedidoResponse = zod.object({
           nome: zod.string(),
           descricao: zod.string().nullish(),
           preco: zod.number(),
-          ncm: zod.string(),
-          cfop: zod.string(),
-          origem: zod.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8"]),
-          cest: zod.string().nullish(),
           categoriaId: zod.number(),
           imagem: zod.string().nullish(),
           ativo: zod.boolean(),
@@ -422,6 +476,18 @@ export const AtualizarStatusPedidoResponse = zod.object({
               nome: zod.string(),
               preco: zod.number(),
               tipo: zod.enum(["adicional", "remocao", "tamanho"]),
+              grupoTitulo: zod.string(),
+              modoSelecao: zod.enum(["multipla", "unica", "sim_nao"]),
+              maxSelecoes: zod.number(),
+              obrigatorio: zod.boolean(),
+              ordemGrupo: zod.number(),
+              ordemItem: zod.number(),
+              imagem: zod
+                .string()
+                .nullish()
+                .describe(
+                  "URL da foto da opção no totem (\/api\/uploads\/...)",
+                ),
             }),
           ),
           categoria: zod
@@ -464,4 +530,80 @@ export const RelatorioVendasResponse = zod.object({
       quantidade: zod.number(),
     }),
   ),
+});
+
+/**
+ * @summary List all printers
+ */
+export const ListarImpressorasResponseItem = zod.object({
+  id: zod.number(),
+  nome: zod.string(),
+  tipoConexao: zod.enum(["rede", "usb"]),
+  endereco: zod.string(),
+  larguraPapel: zod.enum(["80mm", "58mm"]),
+  margemEsquerda: zod.number(),
+  margemDireita: zod.number(),
+  ativa: zod.boolean(),
+  criadoEm: zod.string(),
+  atualizadoEm: zod.string(),
+});
+export const ListarImpressorasResponse = zod.array(
+  ListarImpressorasResponseItem,
+);
+
+/**
+ * @summary Create a printer
+ */
+export const CriarImpressoraBody = zod.object({
+  nome: zod.string(),
+  tipoConexao: zod.enum(["rede", "usb"]).optional(),
+  endereco: zod.string(),
+  larguraPapel: zod.enum(["80mm", "58mm"]).optional(),
+  margemEsquerda: zod.number().optional(),
+  margemDireita: zod.number().optional(),
+  ativa: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a printer
+ */
+export const AtualizarImpressoraParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AtualizarImpressoraBody = zod.object({
+  nome: zod.string(),
+  tipoConexao: zod.enum(["rede", "usb"]).optional(),
+  endereco: zod.string(),
+  larguraPapel: zod.enum(["80mm", "58mm"]).optional(),
+  margemEsquerda: zod.number().optional(),
+  margemDireita: zod.number().optional(),
+  ativa: zod.boolean().optional(),
+});
+
+export const AtualizarImpressoraResponse = zod.object({
+  id: zod.number(),
+  nome: zod.string(),
+  tipoConexao: zod.enum(["rede", "usb"]),
+  endereco: zod.string(),
+  larguraPapel: zod.enum(["80mm", "58mm"]),
+  margemEsquerda: zod.number(),
+  margemDireita: zod.number(),
+  ativa: zod.boolean(),
+  criadoEm: zod.string(),
+  atualizadoEm: zod.string(),
+});
+
+/**
+ * @summary Delete a printer
+ */
+export const ExcluirImpressoraParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Print test page
+ */
+export const TestarImpressoraParams = zod.object({
+  id: zod.coerce.number(),
 });

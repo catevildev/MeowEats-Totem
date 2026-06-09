@@ -1,15 +1,31 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
+  useAtualizarProduto,
   useCriarProduto,
+  useExcluirProduto,
   useListarProdutos,
   useListarCategorias,
 } from "@workspace/api-client-react";
+import type { Produto } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { AdminLayout } from "./AdminLayout";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { resolveMediaUrl } from "@/lib/api-config";
+import { uploadImagem } from "@/lib/upload-image";
+import {
+  emptyGrupoOpcao,
+  extrasToGruposForm,
+  gruposToExtrasInputComUpload,
+  emptyOpcaoItem,
+  MODO_SELECAO_LABELS,
+  type GrupoOpcaoForm,
+  type ModoSelecao,
+} from "@/lib/product-options";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Plus, Edit2, Trash2, X } from "lucide-react";
+import { useClientTable } from "@/hooks/useClientTable";
+import { TablePagination, TableToolbar } from "@/components/TablePagination";
 
 type NovoProdutoForm = {
   nome: string;
@@ -18,16 +34,6 @@ type NovoProdutoForm = {
   categoriaId: string;
   imagem: string | null;
   ativo: boolean;
-  ncm: string;
-  cfop: string;
-  origem: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
-  cest: string;
-};
-
-type ExtraForm = {
-  nome: string;
-  preco: string;
-  tipo: "adicional" | "remocao" | "tamanho";
 };
 
 const INITIAL_FORM: NovoProdutoForm = {
@@ -37,54 +43,59 @@ const INITIAL_FORM: NovoProdutoForm = {
   categoriaId: "",
   imagem: null,
   ativo: true,
-  ncm: "00000000",
-  cfop: "5102",
-  origem: "0",
-  cest: "",
 };
 
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Falha ao ler ficheiro."));
-    reader.readAsDataURL(file);
-  });
-}
+const inputClass =
+  "border rounded-lg px-3 py-2 bg-background w-full min-w-0 text-base";
 
-async function compressImageToDataUrl(file: File): Promise<string> {
-  const rawDataUrl = await fileToDataUrl(file);
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Falha ao processar imagem."));
-    img.src = rawDataUrl;
-  });
-
-  const maxSize = 1200;
-  const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-  const width = Math.max(1, Math.round(image.width * scale));
-  const height = Math.max(1, Math.round(image.height * scale));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return rawDataUrl;
-
-  ctx.drawImage(image, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", 0.82);
+function FormField({
+  label,
+  htmlFor,
+  hint,
+  required,
+  className,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  hint?: string;
+  required?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cn("space-y-1 min-w-0", className)}>
+      <label
+        htmlFor={htmlFor}
+        className="text-sm font-medium text-foreground block"
+      >
+        {label}
+        {required ? <span className="text-destructive ml-0.5">*</span> : null}
+      </label>
+      {children}
+      {hint ? (
+        <p className="text-xs text-muted-foreground leading-snug">{hint}</p>
+      ) : null}
+    </div>
+  );
 }
 
 export default function AdminProdutos() {
   const { data: produtos, isLoading, refetch } = useListarProdutos();
   const { data: categorias } = useListarCategorias();
-  const [showNovoProduto, setShowNovoProduto] = useState(false);
+  const [formModalAberto, setFormModalAberto] = useState(false);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
   const [form, setForm] = useState<NovoProdutoForm>(INITIAL_FORM);
-  const [extrasForm, setExtrasForm] = useState<ExtraForm[]>([]);
+  const [gruposOpcao, setGruposOpcao] = useState<GrupoOpcaoForm[]>([]);
   const [erroForm, setErroForm] = useState<string | null>(null);
+  const [imagemArquivo, setImagemArquivo] = useState<File | null>(null);
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
 
   const criarProduto = useCriarProduto();
+  const atualizarProduto = useAtualizarProduto();
+  const excluirProduto = useExcluirProduto();
+  const salvando =
+    criarProduto.isPending || atualizarProduto.isPending;
   const categoriasOrdenadas = useMemo(
     () =>
       [...(categorias ?? [])].sort(
@@ -96,51 +107,157 @@ export default function AdminProdutos() {
     return (
       form.nome.trim().length > 0 &&
       Number(form.preco) > 0 &&
-      Number(form.categoriaId) > 0 &&
-      /^\d{8}$/.test(form.ncm) &&
-      /^\d{4}$/.test(form.cfop)
+      Number(form.categoriaId) > 0
     );
   }, [form]);
 
-  async function onSubmitNovoProduto(e: FormEvent<HTMLFormElement>) {
+  const {
+    paginatedData,
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    setPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    totalItems,
+  } = useClientTable({
+    data: produtos,
+    filterFn: (item, query) => {
+      const q = query.toLowerCase();
+      if (item.nome?.toLowerCase().includes(q)) return true;
+      if (item.descricao?.toLowerCase().includes(q)) return true;
+      const cat = categorias?.find(c => c.id === item.categoriaId);
+      if (cat && cat.nome.toLowerCase().includes(q)) return true;
+      return false;
+    }
+  });
+
+  function limparPreviewBlob() {
+    if (imagemPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(imagemPreview);
+    }
+  }
+
+  function limparPreviewsOpcoes(grupos: GrupoOpcaoForm[]) {
+    for (const g of grupos) {
+      for (const it of g.itens) {
+        if (it.previewLocal?.startsWith("blob:")) {
+          URL.revokeObjectURL(it.previewLocal);
+        }
+      }
+    }
+  }
+
+  function fecharModal() {
+    limparPreviewBlob();
+    limparPreviewsOpcoes(gruposOpcao);
+    setFormModalAberto(false);
+    setEditandoId(null);
+    setForm(INITIAL_FORM);
+    setGruposOpcao([]);
+    setImagemArquivo(null);
+    setImagemPreview(null);
+    setErroForm(null);
+  }
+
+  function abrirNovo() {
+    limparPreviewBlob();
+    setEditandoId(null);
+    setForm(INITIAL_FORM);
+    setGruposOpcao([]);
+    setImagemArquivo(null);
+    setImagemPreview(null);
+    setErroForm(null);
+    setFormModalAberto(true);
+  }
+
+  function abrirEdicao(produto: Produto) {
+    limparPreviewBlob();
+    setEditandoId(produto.id);
+    setForm({
+      nome: produto.nome,
+      descricao: produto.descricao ?? "",
+      preco: String(produto.preco),
+      categoriaId: String(produto.categoriaId),
+      imagem: produto.imagem ?? null,
+      ativo: produto.ativo,
+    });
+    setGruposOpcao(extrasToGruposForm(produto.extras ?? []));
+    setImagemArquivo(null);
+    setImagemPreview(
+      produto.imagem ? resolveMediaUrl(produto.imagem) ?? null : null,
+    );
+    setErroForm(null);
+    setFormModalAberto(true);
+  }
+
+  async function onExcluir(produto: Produto) {
+    if (
+      !window.confirm(
+        `Excluir o produto "${produto.nome}"? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await excluirProduto.mutateAsync({ id: produto.id });
+      if (editandoId === produto.id) fecharModal();
+      await refetch();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao excluir produto";
+      window.alert(message);
+    }
+  }
+
+  async function onSubmitProduto(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErroForm(null);
 
     if (!podeSalvar) {
-      setErroForm("Preencha nome, preço, categoria e dados fiscais (NCM/CFOP).");
+      setErroForm("Preencha nome, preço e categoria.");
       return;
     }
 
-    try {
-      const extras = extrasForm
-        .filter((e) => e.nome.trim().length > 0)
-        .map((e) => ({
-          nome: e.nome.trim(),
-          preco: Number(e.preco || "0"),
-          tipo: e.tipo,
-        }));
+    const payload = {
+      nome: form.nome.trim(),
+      descricao: form.descricao.trim() || null,
+      preco: Number(form.preco),
+      categoriaId: Number(form.categoriaId),
+      ativo: form.ativo,
+    };
 
-      await criarProduto.mutateAsync({
-        data: {
-          nome: form.nome.trim(),
-          descricao: form.descricao.trim() || null,
-          preco: Number(form.preco),
-          categoriaId: Number(form.categoriaId),
-          imagem: form.imagem,
-          ativo: form.ativo,
-          ncm: form.ncm.trim(),
-          cfop: form.cfop.trim(),
-          origem: form.origem,
-          cest: form.cest.trim() || null,
-          extras,
-        },
-      });
-      setForm(INITIAL_FORM);
-      setExtrasForm([]);
-      setShowNovoProduto(false);
+    try {
+      let imagemUrl: string | null = form.imagem;
+      if (imagemArquivo) {
+        imagemUrl = await uploadImagem(imagemArquivo);
+      }
+
+      const extras = await gruposToExtrasInputComUpload(
+        gruposOpcao,
+        uploadImagem,
+      );
+
+      if (editandoId != null) {
+        await atualizarProduto.mutateAsync({
+          id: editandoId,
+          data: { ...payload, imagem: imagemUrl, extras },
+        });
+      } else {
+        await criarProduto.mutateAsync({
+          data: { ...payload, imagem: imagemUrl, extras },
+        });
+      }
+      fecharModal();
       await refetch();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Falha ao criar produto";
+      const message =
+        err instanceof Error
+          ? err.message
+          : editandoId != null
+            ? "Falha ao atualizar produto"
+            : "Falha ao criar produto";
       setErroForm(message);
     }
   }
@@ -165,7 +282,7 @@ export default function AdminProdutos() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowNovoProduto(true)}
+              onClick={abrirNovo}
               className="bg-primary text-primary-foreground px-6 py-2 rounded-xl font-semibold shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2"
             >
               <Plus className="w-5 h-5" /> Novo Produto
@@ -173,90 +290,125 @@ export default function AdminProdutos() {
           </div>
         </div>
 
-        {showNovoProduto && (
-          <div className="fixed inset-0 z-50 bg-black/40 p-4 md:p-8 overflow-auto">
+        {formModalAberto && createPortal(
+          <div
+            className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-2 sm:p-4 md:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="produto-form-titulo"
+          >
             <form
-              onSubmit={onSubmitNovoProduto}
-              className="bg-card border rounded-2xl shadow-xl p-6 max-w-3xl mx-auto space-y-4"
+              onSubmit={onSubmitProduto}
+              className="bg-card border rounded-2xl overflow-hidden shadow-xl w-full max-w-3xl max-h-[min(100dvh-1rem,920px)] flex flex-col min-h-0"
             >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Novo Produto</h2>
+              <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b shrink-0">
+                <h2 id="produto-form-titulo" className="text-lg sm:text-xl font-bold">
+                  {editandoId != null ? "Editar Produto" : "Novo Produto"}
+                </h2>
                 <button
                   type="button"
-                  className="p-2 rounded-lg hover:bg-muted"
-                  onClick={() => {
-                    setShowNovoProduto(false);
-                    setErroForm(null);
-                  }}
+                  className="p-2 rounded-lg hover:bg-muted shrink-0"
+                  aria-label="Fechar"
+                  onClick={fecharModal}
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  className="border rounded-lg px-3 py-2 bg-background"
-                  placeholder="Nome *"
-                  value={form.nome}
-                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                />
-                <input
-                  className="border rounded-lg px-3 py-2 bg-background"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Preço *"
-                  value={form.preco}
-                  onChange={(e) => setForm((f) => ({ ...f, preco: e.target.value }))}
-                />
-                <select
-                  className="border rounded-lg px-3 py-2 bg-background"
-                  value={form.categoriaId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, categoriaId: e.target.value }))
-                  }
-                >
-                  <option value="">Categoria *</option>
-                  {categoriasOrdenadas.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.nome}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="border rounded-lg px-3 py-2 bg-background file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1"
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const dataUrl = await compressImageToDataUrl(file);
-                      setForm((f) => ({ ...f, imagem: dataUrl }));
-                    } catch (err) {
-                      const message =
-                        err instanceof Error
-                          ? err.message
-                          : "Falha ao carregar imagem.";
-                      setErroForm(message);
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Nome" htmlFor="produto-nome" required>
+                  <input
+                    id="produto-nome"
+                    className={inputClass}
+                    placeholder="Ex.: Big Meow"
+                    value={form.nome}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, nome: e.target.value }))
                     }
-                  }}
-                />
+                  />
+                </FormField>
+                <FormField label="Preço (R$)" htmlFor="produto-preco" required>
+                  <input
+                    id="produto-preco"
+                    className={inputClass}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={form.preco}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, preco: e.target.value }))
+                    }
+                  />
+                </FormField>
+                <FormField
+                  label="Categoria"
+                  htmlFor="produto-categoria"
+                  required
+                  className="sm:col-span-2"
+                >
+                  <select
+                    id="produto-categoria"
+                    className={inputClass}
+                    value={form.categoriaId}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, categoriaId: e.target.value }))
+                    }
+                  >
+                    <option value="">Selecione…</option>
+                    {categoriasOrdenadas.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.nome}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField
+                  label="Imagem"
+                  htmlFor="produto-imagem"
+                  className="sm:col-span-2"
+                  hint="Opcional — no cardápio do cliente a foto só aparece se você enviar um arquivo."
+                >
+                  <input
+                    id="produto-imagem"
+                    className={cn(
+                      inputClass,
+                      "file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1",
+                    )}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (imagemPreview) URL.revokeObjectURL(imagemPreview);
+                      setImagemArquivo(file);
+                      setImagemPreview(URL.createObjectURL(file));
+                      setForm((f) => ({ ...f, imagem: null }));
+                      setErroForm(null);
+                    }}
+                  />
+                </FormField>
               </div>
 
-              {form.imagem && (
+              {imagemPreview && (
                 <div className="border rounded-xl p-3 bg-muted/20">
-                  <p className="text-xs text-muted-foreground mb-2">Preview da imagem</p>
-                  <div className="flex items-center gap-3">
+                  <p className="text-sm font-medium mb-2">Pré-visualização</p>
+                  <div className="flex flex-wrap items-center gap-3">
                     <img
-                      src={resolveMediaUrl(form.imagem)}
+                      src={imagemPreview}
                       alt="Preview"
-                      className="w-24 h-24 rounded-lg object-cover border bg-muted"
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border bg-muted shrink-0"
                     />
                     <button
                       type="button"
-                      className="px-3 py-1 rounded border text-sm"
-                      onClick={() => setForm((f) => ({ ...f, imagem: null }))}
+                      className="px-3 py-1.5 rounded-lg border text-sm"
+                      onClick={() => {
+                        if (imagemPreview) URL.revokeObjectURL(imagemPreview);
+                        setImagemArquivo(null);
+                        setImagemPreview(null);
+                        setForm((f) => ({ ...f, imagem: null }));
+                      }}
                     >
                       Remover imagem
                     </button>
@@ -264,150 +416,433 @@ export default function AdminProdutos() {
                 </div>
               )}
 
-              <textarea
-                className="border rounded-lg px-3 py-2 bg-background w-full"
-                placeholder="Descrição (opcional)"
-                value={form.descricao}
-                onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
-              />
+              <FormField label="Descrição" htmlFor="produto-descricao">
+                <textarea
+                  id="produto-descricao"
+                  className={cn(inputClass, "min-h-[4.5rem] resize-y")}
+                  placeholder="Texto exibido no totem (opcional)"
+                  value={form.descricao}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, descricao: e.target.value }))
+                  }
+                />
+              </FormField>
 
-              <div className="border rounded-xl p-4 space-y-3">
-                <h3 className="font-semibold">Dados fiscais (NFC-e)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <input
-                    className="border rounded-lg px-3 py-2 bg-background"
-                    placeholder="NCM (8 dígitos) *"
-                    maxLength={8}
-                    value={form.ncm}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, ncm: e.target.value.replace(/\D/g, "") }))
-                    }
-                  />
-                  <input
-                    className="border rounded-lg px-3 py-2 bg-background"
-                    placeholder="CFOP (4 dígitos) *"
-                    maxLength={4}
-                    value={form.cfop}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, cfop: e.target.value.replace(/\D/g, "") }))
-                    }
-                  />
-                  <select
-                    className="border rounded-lg px-3 py-2 bg-background"
-                    value={form.origem}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        origem: e.target.value as NovoProdutoForm["origem"],
-                      }))
-                    }
-                  >
-                    <option value="0">Origem 0 - Nacional</option>
-                    <option value="1">Origem 1 - Estrangeira (importação direta)</option>
-                    <option value="2">Origem 2 - Estrangeira (mercado interno)</option>
-                    <option value="3">Origem 3 - Nacional conteúdo importado {" > "}40%</option>
-                    <option value="4">Origem 4 - Nacional PPB</option>
-                    <option value="5">Origem 5 - Nacional conteúdo importado {" <= "}40%</option>
-                    <option value="6">Origem 6 - Estrangeira sem similar nacional</option>
-                    <option value="7">Origem 7 - Estrangeira mercado interno sem similar</option>
-                    <option value="8">Origem 8 - Nacional conteúdo importado {" > "}70%</option>
-                  </select>
-                  <input
-                    className="border rounded-lg px-3 py-2 bg-background"
-                    placeholder="CEST (opcional)"
-                    maxLength={7}
-                    value={form.cest}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, cest: e.target.value.replace(/\D/g, "") }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="border rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Adicionais / Extras</h3>
-                  <button
-                    type="button"
-                    className="px-3 py-1 rounded border text-sm"
-                    onClick={() =>
-                      setExtrasForm((prev) => [
-                        ...prev,
-                        { nome: "", preco: "0", tipo: "adicional" },
-                      ])
-                    }
-                  >
-                    + Adicional
-                  </button>
+              <div className="border rounded-xl p-4 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold">Opções de personalização</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Como no totem: turbinar lanche, ketchup sim/não, etc. Digite o título do grupo e cada opção.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded border text-sm"
+                      onClick={() =>
+                        setGruposOpcao((prev) => [...prev, emptyGrupoOpcao("multipla")])
+                      }
+                    >
+                      + Grupo (várias)
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded border text-sm"
+                      onClick={() =>
+                        setGruposOpcao((prev) => [...prev, emptyGrupoOpcao("unica")])
+                      }
+                    >
+                      + Grupo (uma)
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded border text-sm"
+                      onClick={() =>
+                        setGruposOpcao((prev) => [...prev, emptyGrupoOpcao("sim_nao")])
+                      }
+                    >
+                      + Sim / Não
+                    </button>
+                  </div>
                 </div>
 
-                {extrasForm.length === 0 ? (
+                {gruposOpcao.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Nenhum adicional cadastrado para este produto.
+                    Sem opções — o cliente só vê nome, descrição e observações.
                   </p>
                 ) : (
-                  <div className="space-y-2">
-                    {extrasForm.map((extra, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                        <input
-                          className="border rounded-lg px-3 py-2 bg-background md:col-span-2"
-                          placeholder="Nome do adicional"
-                          value={extra.nome}
-                          onChange={(e) =>
-                            setExtrasForm((prev) =>
-                              prev.map((item, i) =>
-                                i === idx ? { ...item, nome: e.target.value } : item,
-                              ),
-                            )
-                          }
-                        />
-                        <input
-                          className="border rounded-lg px-3 py-2 bg-background"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Preço"
-                          value={extra.preco}
-                          onChange={(e) =>
-                            setExtrasForm((prev) =>
-                              prev.map((item, i) =>
-                                i === idx ? { ...item, preco: e.target.value } : item,
-                              ),
-                            )
-                          }
-                        />
-                        <div className="flex gap-2">
-                          <select
-                            className="border rounded-lg px-3 py-2 bg-background flex-1"
-                            value={extra.tipo}
+                  <div className="space-y-4">
+                    {gruposOpcao.map((grupo, gIdx) => (
+                      <div
+                        key={gIdx}
+                        className="border rounded-lg p-4 bg-muted/20 space-y-3"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <FormField label="Título do grupo" htmlFor={`grupo-titulo-${gIdx}`}>
+                          <input
+                            id={`grupo-titulo-${gIdx}`}
+                            className={inputClass}
+                            placeholder='Ex.: "Turbine seu lanche"'
+                            value={grupo.titulo}
                             onChange={(e) =>
-                              setExtrasForm((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx
-                                    ? {
-                                        ...item,
-                                        tipo: e.target.value as ExtraForm["tipo"],
-                                      }
-                                    : item,
+                              setGruposOpcao((prev) =>
+                                prev.map((g, i) =>
+                                  i === gIdx ? { ...g, titulo: e.target.value } : g,
                                 ),
                               )
                             }
+                          />
+                          </FormField>
+                          <FormField label="Tipo de escolha" htmlFor={`grupo-modo-${gIdx}`}>
+                          <select
+                            id={`grupo-modo-${gIdx}`}
+                            className={inputClass}
+                            value={grupo.modo}
+                            onChange={(e) => {
+                              const modo = e.target.value as ModoSelecao;
+                              setGruposOpcao((prev) =>
+                                prev.map((g, i) => {
+                                  if (i !== gIdx) return g;
+                                  if (modo === "sim_nao") {
+                                    return {
+                                      ...g,
+                                      modo,
+                                      maxSelecoes: 1,
+                                      itens: [
+                                        {
+                                          nome: "Sim",
+                                          preco: g.itens[0]?.preco ?? "0",
+                                          imagem: g.itens[0]?.imagem ?? null,
+                                        },
+                                        {
+                                          nome: "Não",
+                                          preco: "0",
+                                          imagem: null,
+                                        },
+                                      ],
+                                    };
+                                  }
+                                  return {
+                                    ...g,
+                                    modo,
+                                    maxSelecoes:
+                                      modo === "multipla"
+                                        ? Math.max(2, g.maxSelecoes)
+                                        : 1,
+                                  };
+                                }),
+                              );
+                            }}
                           >
-                            <option value="adicional">Adicional</option>
-                            <option value="remocao">Remoção</option>
-                            <option value="tamanho">Tamanho</option>
+                            {(Object.keys(MODO_SELECAO_LABELS) as ModoSelecao[]).map(
+                              (m) => (
+                                <option key={m} value={m}>
+                                  {MODO_SELECAO_LABELS[m]}
+                                </option>
+                              ),
+                            )}
                           </select>
+                          </FormField>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                          {grupo.modo === "multipla" && (
+                            <label className="flex items-center gap-2">
+                              Máximo de escolhas
+                              <input
+                                type="number"
+                                min={1}
+                                max={20}
+                                className="w-16 border rounded px-2 py-1 bg-background"
+                                value={grupo.maxSelecoes}
+                                onChange={(e) =>
+                                  setGruposOpcao((prev) =>
+                                    prev.map((g, i) =>
+                                      i === gIdx
+                                        ? {
+                                            ...g,
+                                            maxSelecoes: Math.max(
+                                              1,
+                                              Number(e.target.value) || 1,
+                                            ),
+                                          }
+                                        : g,
+                                    ),
+                                  )
+                                }
+                              />
+                            </label>
+                          )}
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={grupo.obrigatorio}
+                              onChange={(e) =>
+                                setGruposOpcao((prev) =>
+                                  prev.map((g, i) =>
+                                    i === gIdx
+                                      ? { ...g, obrigatorio: e.target.checked }
+                                      : g,
+                                  ),
+                                )
+                              }
+                            />
+                            Obrigatório no pedido
+                          </label>
                           <button
                             type="button"
-                            className="px-3 py-2 rounded border text-sm"
+                            className="text-destructive text-sm ml-auto"
                             onClick={() =>
-                              setExtrasForm((prev) =>
-                                prev.filter((_, i) => i !== idx),
+                              setGruposOpcao((prev) =>
+                                prev.filter((_, i) => i !== gIdx),
                               )
                             }
                           >
-                            Remover
+                            Remover grupo
                           </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {grupo.itens.length > 0 && (
+                            <div className="hidden sm:grid sm:grid-cols-[4.5rem_1fr_7.5rem_2.25rem] gap-2 px-0.5 text-xs font-medium text-muted-foreground">
+                              <span>Foto</span>
+                              <span>Nome da opção</span>
+                              <span>Valor (R$)</span>
+                              <span className="sr-only">Remover</span>
+                            </div>
+                          )}
+                          {grupo.itens.map((item, iIdx) => {
+                            const valorDesabilitado =
+                              grupo.modo === "sim_nao" && iIdx === 1;
+                            const valorLabel =
+                              grupo.modo === "sim_nao"
+                                ? iIdx === 0
+                                  ? "Valor se Sim (R$)"
+                                  : "Valor"
+                                : "Valor (R$)";
+                            return (
+                            <div
+                              key={iIdx}
+                              className="grid grid-cols-1 sm:grid-cols-[4.5rem_1fr_7.5rem_2.25rem] gap-3 sm:gap-2 sm:items-end border sm:border-0 rounded-lg sm:rounded-none p-3 sm:p-0 bg-background/50 sm:bg-transparent"
+                            >
+                              <FormField
+                                label="Foto da opção"
+                                htmlFor={`opcao-img-${gIdx}-${iIdx}`}
+                                hint="Opcional — aparece no totem"
+                                className="sm:mb-0 sm:[&_label]:sr-only sm:[&_p]:hidden"
+                              >
+                                <div className="flex flex-col items-center gap-1">
+                                  {(item.previewLocal ||
+                                    resolveMediaUrl(item.imagem)) && (
+                                    <img
+                                      src={
+                                        item.previewLocal ??
+                                        resolveMediaUrl(item.imagem) ??
+                                        ""
+                                      }
+                                      alt=""
+                                      className="w-14 h-14 rounded-lg object-cover border bg-muted"
+                                    />
+                                  )}
+                                  <input
+                                    id={`opcao-img-${gIdx}-${iIdx}`}
+                                    type="file"
+                                    accept="image/*"
+                                    className="text-[10px] w-full max-w-[4.5rem]"
+                                    disabled={valorDesabilitado}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      setGruposOpcao((prev) =>
+                                        prev.map((g, gi) => {
+                                          if (gi !== gIdx) return g;
+                                          return {
+                                            ...g,
+                                            itens: g.itens.map((it, ii) => {
+                                              if (ii !== iIdx) return it;
+                                              if (it.previewLocal) {
+                                                URL.revokeObjectURL(
+                                                  it.previewLocal,
+                                                );
+                                              }
+                                              if (!file) {
+                                                return {
+                                                  ...it,
+                                                  arquivoPendente: null,
+                                                  previewLocal: null,
+                                                };
+                                              }
+                                              return {
+                                                ...it,
+                                                arquivoPendente: file,
+                                                previewLocal:
+                                                  URL.createObjectURL(file),
+                                                imagem: null,
+                                              };
+                                            }),
+                                          };
+                                        }),
+                                      );
+                                    }}
+                                  />
+                                  {(item.previewLocal || item.imagem) && (
+                                    <button
+                                      type="button"
+                                      className="text-[10px] text-muted-foreground underline"
+                                      onClick={() =>
+                                        setGruposOpcao((prev) =>
+                                          prev.map((g, gi) => {
+                                            if (gi !== gIdx) return g;
+                                            return {
+                                              ...g,
+                                              itens: g.itens.map((it, ii) => {
+                                                if (ii !== iIdx) return it;
+                                                if (it.previewLocal) {
+                                                  URL.revokeObjectURL(
+                                                    it.previewLocal,
+                                                  );
+                                                }
+                                                return {
+                                                  ...it,
+                                                  imagem: null,
+                                                  arquivoPendente: null,
+                                                  previewLocal: null,
+                                                };
+                                              }),
+                                            };
+                                          }),
+                                        )
+                                      }
+                                    >
+                                      Remover
+                                    </button>
+                                  )}
+                                </div>
+                              </FormField>
+                              <FormField
+                                label="Nome da opção"
+                                htmlFor={`opcao-nome-${gIdx}-${iIdx}`}
+                                className="sm:mb-0 sm:[&_label]:sr-only"
+                              >
+                              <input
+                                id={`opcao-nome-${gIdx}-${iIdx}`}
+                                className={inputClass}
+                                placeholder={
+                                  grupo.modo === "sim_nao"
+                                    ? iIdx === 0
+                                      ? "Sim"
+                                      : "Não"
+                                    : "Ex.: Bacon em tiras"
+                                }
+                                value={item.nome}
+                                onChange={(e) =>
+                                  setGruposOpcao((prev) =>
+                                    prev.map((g, gi) =>
+                                      gi === gIdx
+                                        ? {
+                                            ...g,
+                                            itens: g.itens.map((it, ii) =>
+                                              ii === iIdx
+                                                ? { ...it, nome: e.target.value }
+                                                : it,
+                                            ),
+                                          }
+                                        : g,
+                                    ),
+                                  )
+                                }
+                              />
+                              </FormField>
+                              <FormField
+                                label={valorLabel}
+                                htmlFor={`opcao-valor-${gIdx}-${iIdx}`}
+                                hint={
+                                  valorDesabilitado
+                                    ? undefined
+                                    : "Acréscimo ao preço do produto (0 = grátis)"
+                                }
+                                className="sm:mb-0 sm:[&_label]:sr-only sm:[&_p]:hidden"
+                              >
+                              <input
+                                id={`opcao-valor-${gIdx}-${iIdx}`}
+                                className={inputClass}
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                inputMode="decimal"
+                                aria-label={valorLabel}
+                                placeholder="0,00"
+                                value={item.preco}
+                                disabled={valorDesabilitado}
+                                onChange={(e) =>
+                                  setGruposOpcao((prev) =>
+                                    prev.map((g, gi) =>
+                                      gi === gIdx
+                                        ? {
+                                            ...g,
+                                            itens: g.itens.map((it, ii) =>
+                                              ii === iIdx
+                                                ? { ...it, preco: e.target.value }
+                                                : it,
+                                            ),
+                                          }
+                                        : g,
+                                    ),
+                                  )
+                                }
+                              />
+                              </FormField>
+                              {grupo.itens.length > 1 ? (
+                                <button
+                                  type="button"
+                                  className="h-10 sm:h-[42px] px-2 rounded-lg border text-sm shrink-0 justify-self-end sm:justify-self-auto"
+                                  aria-label="Remover opção"
+                                  onClick={() =>
+                                    setGruposOpcao((prev) =>
+                                      prev.map((g, gi) =>
+                                        gi === gIdx
+                                          ? {
+                                              ...g,
+                                              itens: g.itens.filter(
+                                                (_, ii) => ii !== iIdx,
+                                              ),
+                                            }
+                                          : g,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  ×
+                                </button>
+                              ) : (
+                                <span className="hidden sm:block" aria-hidden />
+                              )}
+                            </div>
+                          );
+                          })}
+                          {grupo.modo !== "sim_nao" && (
+                            <button
+                              type="button"
+                              className="text-sm text-primary font-medium"
+                              onClick={() =>
+                                setGruposOpcao((prev) =>
+                                  prev.map((g, gi) =>
+                                    gi === gIdx
+                                      ? {
+                                          ...g,
+                                          itens: [
+                                            ...g.itens,
+                                            emptyOpcaoItem(),
+                                          ],
+                                        }
+                                      : g,
+                                  ),
+                                )
+                              }
+                            >
+                              + Digitar outra opção
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -429,31 +864,43 @@ export default function AdminProdutos() {
                   {erroForm}
                 </div>
               )}
+              </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-4 sm:px-6 py-4 border-t bg-card shrink-0">
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-lg border"
-                  onClick={() => setShowNovoProduto(false)}
+                  className="px-4 py-2.5 rounded-lg border w-full sm:w-auto"
+                  onClick={fecharModal}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={!podeSalvar || criarProduto.isPending}
-                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
+                  disabled={!podeSalvar || salvando}
+                  className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-50 w-full sm:w-auto font-semibold"
                 >
-                  {criarProduto.isPending ? "Salvando..." : "Salvar produto"}
+                  {salvando
+                    ? "Salvando..."
+                    : editandoId != null
+                      ? "Salvar alterações"
+                      : "Salvar produto"}
                 </button>
               </div>
             </form>
-          </div>
+          </div>,
+          document.body
         )}
 
         {isLoading ? (
           <LoadingSpinner />
         ) : (
-          <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+          <div className="space-y-4">
+            <TableToolbar 
+              searchQuery={searchQuery} 
+              setSearchQuery={setSearchQuery} 
+              searchPlaceholder="Buscar por nome, descrição ou categoria..." 
+            />
+            <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -466,8 +913,15 @@ export default function AdminProdutos() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {produtos?.map((p) => {
-                    const cat = categorias?.find(c => c.id === p.categoriaId);
+                  {paginatedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                        {searchQuery ? "Nenhum produto encontrado na busca" : "Nenhum produto cadastrado"}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedData.map((p) => {
+                      const cat = categorias?.find(c => c.id === p.categoriaId);
                     return (
                       <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                         <td className="p-4">
@@ -491,20 +945,42 @@ export default function AdminProdutos() {
                         </td>
                         <td className="p-4">
                           <div className="flex items-center justify-end gap-2">
-                            <button className="p-2 text-muted-foreground hover:text-primary transition-colors bg-muted rounded-lg">
+                            <button
+                              type="button"
+                              className="p-2 text-muted-foreground hover:text-primary transition-colors bg-muted rounded-lg"
+                              aria-label={`Editar ${p.nome}`}
+                              onClick={() => abrirEdicao(p)}
+                            >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button className="p-2 text-muted-foreground hover:text-destructive transition-colors bg-muted rounded-lg">
+                            <button
+                              type="button"
+                              className="p-2 text-muted-foreground hover:text-destructive transition-colors bg-muted rounded-lg disabled:opacity-50"
+                              aria-label={`Excluir ${p.nome}`}
+                              disabled={excluirProduto.isPending}
+                              onClick={() => onExcluir(p)}
+                            >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                  )}
                 </tbody>
               </table>
             </div>
+            
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              setPage={setPage}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+              totalItems={totalItems}
+            />
+          </div>
           </div>
         )}
       </div>

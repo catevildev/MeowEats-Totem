@@ -2,11 +2,9 @@ import { useState } from "react";
 import { useListarPedidos, useAtualizarStatusPedido, Pedido, AtualizarStatusInputStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Clock, Check, ChevronRight } from "lucide-react";
+import { Clock, Check, ChevronRight, GripHorizontal } from "lucide-react";
 import { StandardNavbar } from "@/components/layout/Navbar";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { formatCurrency } from "@/lib/utils";
 
 export default function CozinhaScreen() {
   const queryClient = useQueryClient();
@@ -27,9 +25,31 @@ export default function CozinhaScreen() {
     let nextStatus: AtualizarStatusInputStatus = 'em_preparo';
     if (currentStatus === 'novo') nextStatus = 'em_preparo';
     else if (currentStatus === 'em_preparo') nextStatus = 'pronto';
-    else if (currentStatus === 'pronto') nextStatus = 'entregue'; // Usually done on another screen, but keeping it simple
+    else if (currentStatus === 'pronto') nextStatus = 'entregue'; 
 
     await atualizarStatus.mutateAsync({ id, data: { status: nextStatus } });
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    e.dataTransfer.setData("pedidoId", id.toString());
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); 
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, newStatus: AtualizarStatusInputStatus) => {
+    e.preventDefault();
+    const idStr = e.dataTransfer.getData("pedidoId");
+    if (!idStr) return;
+    
+    const id = parseInt(idStr, 10);
+    const pedido = pedidos?.find(p => p.id === id);
+    if (pedido && pedido.status !== newStatus) {
+      await atualizarStatus.mutateAsync({ id, data: { status: newStatus } });
+    }
   };
 
   const novos = pedidos?.filter(p => p.status === 'novo') || [];
@@ -52,9 +72,17 @@ export default function CozinhaScreen() {
               title="Novos Pedidos" 
               count={novos.length} 
               color="bg-blue-500"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 'novo')}
             >
               {novos.map(p => (
-                <OrderCard key={p.id} pedido={p} onMove={() => handleMove(p.id, p.status)} actionLabel="Preparar" />
+                <OrderCard 
+                  key={p.id} 
+                  pedido={p} 
+                  onMove={() => handleMove(p.id, p.status)} 
+                  actionLabel="Preparar"
+                  onDragStart={(e) => handleDragStart(e, p.id)}
+                />
               ))}
             </KanbanColumn>
 
@@ -62,9 +90,18 @@ export default function CozinhaScreen() {
               title="Em Preparo" 
               count={emPreparo.length} 
               color="bg-warning"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 'em_preparo')}
             >
               {emPreparo.map(p => (
-                <OrderCard key={p.id} pedido={p} onMove={() => handleMove(p.id, p.status)} actionLabel="Pronto" isWarning />
+                <OrderCard 
+                  key={p.id} 
+                  pedido={p} 
+                  onMove={() => handleMove(p.id, p.status)} 
+                  actionLabel="Pronto" 
+                  isWarning 
+                  onDragStart={(e) => handleDragStart(e, p.id)}
+                />
               ))}
             </KanbanColumn>
 
@@ -72,9 +109,18 @@ export default function CozinhaScreen() {
               title="Prontos" 
               count={prontos.length} 
               color="bg-success"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 'pronto')}
             >
               {prontos.map(p => (
-                <OrderCard key={p.id} pedido={p} onMove={() => handleMove(p.id, p.status)} actionLabel="Entregue" isSuccess />
+                <OrderCard 
+                  key={p.id} 
+                  pedido={p} 
+                  onMove={() => handleMove(p.id, p.status)} 
+                  actionLabel="Entregue" 
+                  isSuccess 
+                  onDragStart={(e) => handleDragStart(e, p.id)}
+                />
               ))}
             </KanbanColumn>
 
@@ -85,9 +131,18 @@ export default function CozinhaScreen() {
   );
 }
 
-function KanbanColumn({ title, count, color, children }: { title: string, count: number, color: string, children: React.ReactNode }) {
+function KanbanColumn({ 
+  title, count, color, children, onDragOver, onDrop 
+}: { 
+  title: string, count: number, color: string, children: React.ReactNode, 
+  onDragOver: (e: React.DragEvent) => void, onDrop: (e: React.DragEvent) => void 
+}) {
   return (
-    <div className="bg-card rounded-2xl shadow-sm border flex flex-col overflow-hidden max-h-full">
+    <div 
+      className="bg-card rounded-2xl shadow-sm border flex flex-col overflow-hidden max-h-full transition-colors"
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       <div className="p-4 border-b flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-3">
           <div className={`w-4 h-4 rounded-full ${color}`} />
@@ -100,8 +155,8 @@ function KanbanColumn({ title, count, color, children }: { title: string, count:
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {children}
         {count === 0 && (
-          <div className="h-32 flex items-center justify-center text-muted-foreground italic">
-            Vazio
+          <div className="h-32 flex items-center justify-center text-muted-foreground italic border-2 border-dashed border-muted rounded-xl mx-2">
+            Arraste pedidos para cá
           </div>
         )}
       </div>
@@ -109,18 +164,30 @@ function KanbanColumn({ title, count, color, children }: { title: string, count:
   );
 }
 
-function OrderCard({ pedido, onMove, actionLabel, isWarning, isSuccess }: { pedido: Pedido, onMove: () => void, actionLabel: string, isWarning?: boolean, isSuccess?: boolean }) {
+function OrderCard({ 
+  pedido, onMove, actionLabel, isWarning, isSuccess, onDragStart 
+}: { 
+  pedido: Pedido, onMove: () => void, actionLabel: string, isWarning?: boolean, isSuccess?: boolean,
+  onDragStart: (e: React.DragEvent) => void 
+}) {
   const time = format(new Date(pedido.criadoEm), "HH:mm");
   
   return (
-    <div className="bg-background border rounded-xl p-4 shadow-sm relative overflow-hidden group">
+    <div 
+      draggable
+      onDragStart={onDragStart}
+      className="bg-background border rounded-xl p-4 shadow-sm relative overflow-hidden group cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors"
+    >
       {/* Type badge corner */}
       <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-bold text-white rounded-bl-lg ${pedido.tipoPedido === 'para_viagem' ? 'bg-secondary' : 'bg-primary'}`}>
         {pedido.tipoPedido === 'para_viagem' ? 'Viagem' : 'Salão'}
       </div>
 
       <div className="flex items-center justify-between mb-3 border-b pb-3 pt-2">
-        <h3 className="text-3xl font-display font-black text-foreground">{pedido.numero}</h3>
+        <div className="flex items-center gap-2">
+          <GripHorizontal className="w-5 h-5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <h3 className="text-3xl font-display font-black text-foreground">{pedido.numero}</h3>
+        </div>
         <div className="flex items-center text-muted-foreground mr-16">
           <Clock className="w-4 h-4 mr-1" />
           <span className="font-medium">{time}</span>

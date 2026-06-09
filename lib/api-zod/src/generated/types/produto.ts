@@ -7,17 +7,12 @@
  */
 import type { Categoria } from "./categoria";
 import type { Extra } from "./extra";
-import type { ProdutoOrigem } from "./produtoOrigem";
 
 export interface Produto {
   id: number;
   nome: string;
   descricao?: string | null;
   preco: number;
-  ncm: string;
-  cfop: string;
-  origem: ProdutoOrigem;
-  cest?: string | null;
   categoriaId: number;
   imagem?: string | null;
   ativo: boolean;

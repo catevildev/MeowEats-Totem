@@ -1,10 +1,16 @@
 # Stack local: MySQL + API + Kiosk (Vite).
-# Host: MySQL 6010, API 6005, UI 6001 (intervalo 6000–6020).
+# Host: MySQL 6010, API 6005, UI 2302 (kiosk).
+#
+# Persistência:
+#   - MySQL: volume meoweats_mysql_data (categorias, produtos, pedidos, imagemUrl, etc.)
+#   - Fotos de categoria/produto: pasta ./uploads no host (montada em /app/uploads na API)
 services:
   mysql:
     image: mysql:8.0
     container_name: meoweats-mysql
     restart: unless-stopped
+    volumes:
+      - meoweats_mysql_data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: meoweats_root
       MYSQL_DATABASE: meoweats
@@ -46,13 +52,11 @@ services:
       - .env
     environment:
       PORT: "6005"
-      DATABASE_URL: mysql://meoweats:meoweats@mysql:3306/meoweats
-      # IMAGE_STORAGE=firebase
-      # FIREBASE_STORAGE_BUCKET=seu-projeto.appspot.com
-      # GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase-sa.json
-    # Descomente para Firebase (monte o JSON da conta de serviço):
-    # volumes:
-    #   - ./secrets/firebase-service-account.json:/run/secrets/firebase-sa.json:ro
+      UPLOADS_DIR: /app/uploads
+      DATABASE_URL: mysql://meoweats:meoweats@mysql:3306/meoweats?timezone=Z
+      # Bridge TEF roda no host (dotnet run); dentro do container use host.docker.internal
+      TEF_BRIDGE_HTTP_URL: http://host.docker.internal:5099
+      TZ: America/Cuiaba
     depends_on:
       mysql:
         condition: service_healthy
@@ -81,6 +85,7 @@ services:
       PORT: "6001"
       BASE_PATH: /
       API_URL: http://api:6005
+      TZ: America/Cuiaba
     depends_on:
       api:
         condition: service_healthy
@@ -96,3 +101,6 @@ services:
       timeout: 5s
       retries: 25
       start_period: 120s
+
+volumes:
+  meoweats_mysql_data:

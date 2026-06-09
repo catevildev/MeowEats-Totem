@@ -5,10 +5,18 @@
  * Restaurant Self-Service Kiosk API
  * OpenAPI spec version: 0.1.0
  */
+import type { CriarExtraInputModoSelecao } from "./criarExtraInputModoSelecao";
 import type { CriarExtraInputTipo } from "./criarExtraInputTipo";
 
 export interface CriarExtraInput {
   nome: string;
   preco: number;
   tipo: CriarExtraInputTipo;
+  grupoTitulo?: string;
+  modoSelecao?: CriarExtraInputModoSelecao;
+  maxSelecoes?: number;
+  obrigatorio?: boolean;
+  ordemGrupo?: number;
+  ordemItem?: number;
+  imagem?: string | null;
 }

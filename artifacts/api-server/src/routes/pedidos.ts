@@ -1,6 +1,27 @@
 import { Router, type IRouter } from "express";
 import { db, pedidosTable, itensPedidoTable, produtosTable, extrasTable, runInsertWithLastId } from "@workspace/db";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, gte, lt, ne, inArray } from "drizzle-orm";
+import { imprimirReciboPedido } from "../lib/printer";
+
+function getDayBounds(dataParam?: string): { start: Date; end: Date } {
+  let y: number;
+  let m: number;
+  let d: number;
+
+  if (dataParam && /^\d{4}-\d{2}-\d{2}$/.test(dataParam)) {
+    [y, m, d] = dataParam.split("-").map(Number);
+  } else {
+    const now = new Date();
+    y = now.getFullYear();
+    m = now.getMonth() + 1;
+    d = now.getDate();
+  }
+
+  return {
+    start: new Date(y, m - 1, d, 0, 0, 0, 0),
+    end: new Date(y, m - 1, d + 1, 0, 0, 0, 0),
+  };
+}
 
 const router: IRouter = Router();
 
@@ -25,7 +46,7 @@ async function getNextNumero(): Promise<string> {
   return "A001";
 }
 
-async function getPedidoCompleto(id: number) {
+export async function getPedidoCompleto(id: number) {
   const pedido = await db.select().from(pedidosTable).where(eq(pedidosTable.id, id)).then(r => r[0]);
   if (!pedido) return null;
 
@@ -34,7 +55,7 @@ async function getPedidoCompleto(id: number) {
     const produto = await db.select().from(produtosTable).where(eq(produtosTable.id, item.produtoId)).then(r => r[0]);
     const extrasIds = JSON.parse(item.extrasIds ?? "[]") as number[];
     const extras = extrasIds.length > 0
-      ? await db.select().from(extrasTable).where(sql`${extrasTable.id} = ANY(${extrasIds})`)
+      ? await db.select().from(extrasTable).where(inArray(extrasTable.id, extrasIds))
       : [];
     return {
       ...item,
@@ -105,7 +126,7 @@ router.post("/pedidos", async (req, res) => {
 
       let itemPrice = parseFloat(produto.preco);
       if (item.extrasIds?.length) {
-        const extras = await db.select().from(extrasTable).where(sql`${extrasTable.id} = ANY(${item.extrasIds})`);
+        const extras = await db.select().from(extrasTable).where(inArray(extrasTable.id, item.extrasIds));
         for (const extra of extras) {
           if (extra.tipo === "adicional" || extra.tipo === "tamanho") {
             itemPrice += parseFloat(extra.preco);
@@ -129,7 +150,7 @@ router.post("/pedidos", async (req, res) => {
       const produto = await db.select().from(produtosTable).where(eq(produtosTable.id, item.produtoId)).then(r => r[0]);
       let itemPrice = parseFloat(produto!.preco);
       if (item.extrasIds?.length) {
-        const extras = await db.select().from(extrasTable).where(sql`${extrasTable.id} = ANY(${item.extrasIds})`);
+        const extras = await db.select().from(extrasTable).where(inArray(extrasTable.id, item.extrasIds));
         for (const extra of extras) {
           if (extra.tipo === "adicional" || extra.tipo === "tamanho") {
             itemPrice += parseFloat(extra.preco);
@@ -147,6 +168,11 @@ router.post("/pedidos", async (req, res) => {
     }
 
     const result = await getPedidoCompleto(pedidoId);
+    
+    if (result) {
+      imprimirReciboPedido(result as any).catch(e => req.log.error({ err: e }, "Erro ao acionar impressora no POST /pedidos"));
+    }
+
     res.status(201).json(result);
   } catch (err) {
     req.log.error({ err }, "Error creating pedido");
@@ -173,32 +199,51 @@ router.patch("/pedidos/:id/status", async (req, res) => {
   }
 });
 
+router.post("/pedidos/:id/imprimir", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const pedido = await getPedidoCompleto(id);
+    if (!pedido) return res.status(404).json({ error: "Pedido não encontrado" });
+
+    await imprimirReciboPedido(pedido as any);
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Error reprinting pedido");
+    res.status(500).json({ error: "Erro ao reimprimir pedido" });
+  }
+});
+
 router.get("/relatorios/vendas", async (req, res) => {
   try {
     const { data } = req.query;
-    const hoje = data ? new Date(data as string) : new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const fimDia = new Date(hoje);
-    fimDia.setHours(23, 59, 59, 999);
+    const { start, end } = getDayBounds(
+      typeof data === "string" ? data : undefined,
+    );
 
     const pedidos = await db.select().from(pedidosTable).where(
       and(
-        sql`${pedidosTable.criadoEm} >= ${hoje}`,
-        sql`${pedidosTable.criadoEm} <= ${fimDia}`,
-        sql`${pedidosTable.status} != 'cancelado'`
-      )
+        gte(pedidosTable.criadoEm, start),
+        lt(pedidosTable.criadoEm, end),
+        ne(pedidosTable.status, "cancelado"),
+      ),
     );
 
     const totalVendas = pedidos.reduce((sum, p) => sum + parseFloat(p.total), 0);
     const totalPedidos = pedidos.length;
     const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
 
-    const itensDoDia = await db.select({
-      produtoId: itensPedidoTable.produtoId,
-      quantidade: itensPedidoTable.quantidade,
-      preco: itensPedidoTable.preco,
-    }).from(itensPedidoTable)
-      .where(sql`${itensPedidoTable.pedidoId} IN (${pedidos.map(p => p.id).join(",") || "0"})`);
+    const pedidoIds = pedidos.map((p) => p.id);
+    const itensDoDia =
+      pedidoIds.length === 0
+        ? []
+        : await db
+            .select({
+              produtoId: itensPedidoTable.produtoId,
+              quantidade: itensPedidoTable.quantidade,
+              preco: itensPedidoTable.preco,
+            })
+            .from(itensPedidoTable)
+            .where(inArray(itensPedidoTable.pedidoId, pedidoIds));
 
     const produtoContagem: Record<number, { quantidade: number; total: number }> = {};
     for (const item of itensDoDia) {

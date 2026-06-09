@@ -15,6 +15,8 @@ tags:
     description: Products
   - name: pedidos
     description: Orders
+  - name: impressoras
+    description: Printers
 paths:
   /healthz:
     get:
@@ -262,6 +264,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/Pedido"
 
+  /pedidos/{id}/imprimir:
+    post:
+      operationId: imprimirPedido
+      tags: [pedidos]
+      summary: Re-print an order receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Print successful
+          
+  /fiscal/nfce/emitir/{pedidoId}:
+    post:
+      operationId: emitirNfce
+      tags: [fiscal]
+      summary: Emitir NFC-e para um pedido
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+      responses:
+        "202":
+          description: Emissão aceita ou em processamento
+        "500":
+          description: Internal server error
+
   /pedidos/{id}/status:
     patch:
       operationId: atualizarStatusPedido
@@ -305,6 +348,91 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RelatorioVendas"
+
+  /impressoras:
+    get:
+      operationId: listarImpressoras
+      tags: [impressoras]
+      summary: List all printers
+      responses:
+        "200":
+          description: List of printers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Impressora"
+    post:
+      operationId: criarImpressora
+      tags: [impressoras]
+      summary: Create a printer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarImpressoraInput"
+      responses:
+        "201":
+          description: Printer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Impressora"
+
+  /impressoras/{id}:
+    put:
+      operationId: atualizarImpressora
+      tags: [impressoras]
+      summary: Update a printer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriarImpressoraInput"
+      responses:
+        "200":
+          description: Printer updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Impressora"
+    delete:
+      operationId: excluirImpressora
+      tags: [impressoras]
+      summary: Delete a printer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Printer deleted
+
+  /impressoras/{id}/test:
+    post:
+      operationId: testarImpressora
+      tags: [impressoras]
+      summary: Print test page
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Test successful
 
 components:
   schemas:
@@ -365,16 +493,6 @@ components:
           nullable: true
         preco:
           type: number
-        ncm:
-          type: string
-        cfop:
-          type: string
-        origem:
-          type: string
-          enum: ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
-        cest:
-          type: string
-          nullable: true
         categoriaId:
           type: integer
         imagem:
@@ -393,9 +511,6 @@ components:
         - id
         - nome
         - preco
-        - ncm
-        - cfop
-        - origem
         - categoriaId
         - ativo
         - extras
@@ -412,11 +527,34 @@ components:
         tipo:
           type: string
           enum: [adicional, remocao, tamanho]
+        grupoTitulo:
+          type: string
+        modoSelecao:
+          type: string
+          enum: [multipla, unica, sim_nao]
+        maxSelecoes:
+          type: integer
+        obrigatorio:
+          type: boolean
+        ordemGrupo:
+          type: integer
+        ordemItem:
+          type: integer
+        imagem:
+          type: string
+          nullable: true
+          description: URL da foto da opção no totem (/api/uploads/...)
       required:
         - id
         - nome
         - preco
         - tipo
+        - grupoTitulo
+        - modoSelecao
+        - maxSelecoes
+        - obrigatorio
+        - ordemGrupo
+        - ordemItem
 
     CriarProdutoInput:
       type: object
@@ -428,16 +566,6 @@ components:
           nullable: true
         preco:
           type: number
-        ncm:
-          type: string
-        cfop:
-          type: string
-        origem:
-          type: string
-          enum: ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
-        cest:
-          type: string
-          nullable: true
         categoriaId:
           type: integer
         imagem:
@@ -452,9 +580,6 @@ components:
       required:
         - nome
         - preco
-        - ncm
-        - cfop
-        - origem
         - categoriaId
         - ativo
 
@@ -468,6 +593,22 @@ components:
         tipo:
           type: string
           enum: [adicional, remocao, tamanho]
+        grupoTitulo:
+          type: string
+        modoSelecao:
+          type: string
+          enum: [multipla, unica, sim_nao]
+        maxSelecoes:
+          type: integer
+        obrigatorio:
+          type: boolean
+        ordemGrupo:
+          type: integer
+        ordemItem:
+          type: integer
+        imagem:
+          type: string
+          nullable: true
       required:
         - nome
         - preco
@@ -635,3 +776,63 @@ components:
         - hora
         - total
         - quantidade
+
+    Impressora:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        tipoConexao:
+          type: string
+          enum: [rede, usb]
+        endereco:
+          type: string
+        larguraPapel:
+          type: string
+          enum: [80mm, 58mm]
+        margemEsquerda:
+          type: integer
+        margemDireita:
+          type: integer
+        ativa:
+          type: boolean
+        criadoEm:
+          type: string
+        atualizadoEm:
+          type: string
+      required:
+        - id
+        - nome
+        - tipoConexao
+        - endereco
+        - larguraPapel
+        - margemEsquerda
+        - margemDireita
+        - ativa
+        - criadoEm
+        - atualizadoEm
+
+    CriarImpressoraInput:
+      type: object
+      properties:
+        nome:
+          type: string
+        tipoConexao:
+          type: string
+          enum: [rede, usb]
+        endereco:
+          type: string
+        larguraPapel:
+          type: string
+          enum: [80mm, 58mm]
+        margemEsquerda:
+          type: integer
+        margemDireita:
+          type: integer
+        ativa:
+          type: boolean
+      required:
+        - nome
+        - endereco

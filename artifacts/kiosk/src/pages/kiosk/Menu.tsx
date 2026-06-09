@@ -26,7 +26,7 @@ function CategorySidebarVisual({ cat }: { cat: Categoria }) {
       >
         <img
           src={url}
-          alt=""
+          alt={cat.nome}
           className="w-full h-full object-cover"
           onError={() => setImgFailed(true)}
         />
@@ -132,7 +132,7 @@ export function MenuScreen({ onBack, onGoToCart }: MenuScreenProps) {
                 >
                   <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                     <img 
-                      src={resolveMediaUrl(produto.imagem) || `https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=400&fit=crop`} 
+                      src={produto.imagem || `https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=400&fit=crop`} 
                       alt={produto.nome}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />

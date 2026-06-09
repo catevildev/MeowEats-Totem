@@ -20,9 +20,12 @@ import type {
   AtualizarStatusInput,
   Categoria,
   CriarCategoriaInput,
+  CriarImpressoraInput,
   CriarPedidoInput,
   CriarProdutoInput,
+  EmitirNfceBody,
   HealthStatus,
+  Impressora,
   ListarPedidosParams,
   ListarProdutosParams,
   Pedido,
@@ -1153,6 +1156,177 @@ export function useBuscarPedido<
 }
 
 /**
+ * @summary Re-print an order receipt
+ */
+export const getImprimirPedidoUrl = (id: number) => {
+  return `/api/pedidos/${id}/imprimir`;
+};
+
+export const imprimirPedido = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getImprimirPedidoUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getImprimirPedidoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof imprimirPedido>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof imprimirPedido>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["imprimirPedido"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof imprimirPedido>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return imprimirPedido(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImprimirPedidoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof imprimirPedido>>
+>;
+
+export type ImprimirPedidoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Re-print an order receipt
+ */
+export const useImprimirPedido = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof imprimirPedido>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof imprimirPedido>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getImprimirPedidoMutationOptions(options));
+};
+
+/**
+ * @summary Emitir NFC-e para um pedido
+ */
+export const getEmitirNfceUrl = (pedidoId: number) => {
+  return `/api/fiscal/nfce/emitir/${pedidoId}`;
+};
+
+export const emitirNfce = async (
+  pedidoId: number,
+  emitirNfceBody?: EmitirNfceBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getEmitirNfceUrl(pedidoId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(emitirNfceBody),
+  });
+};
+
+export const getEmitirNfceMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof emitirNfce>>,
+    TError,
+    { pedidoId: number; data: BodyType<EmitirNfceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof emitirNfce>>,
+  TError,
+  { pedidoId: number; data: BodyType<EmitirNfceBody> },
+  TContext
+> => {
+  const mutationKey = ["emitirNfce"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof emitirNfce>>,
+    { pedidoId: number; data: BodyType<EmitirNfceBody> }
+  > = (props) => {
+    const { pedidoId, data } = props ?? {};
+
+    return emitirNfce(pedidoId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EmitirNfceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof emitirNfce>>
+>;
+export type EmitirNfceMutationBody = BodyType<EmitirNfceBody>;
+export type EmitirNfceMutationError = ErrorType<void>;
+
+/**
+ * @summary Emitir NFC-e para um pedido
+ */
+export const useEmitirNfce = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof emitirNfce>>,
+    TError,
+    { pedidoId: number; data: BodyType<EmitirNfceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof emitirNfce>>,
+  TError,
+  { pedidoId: number; data: BodyType<EmitirNfceBody> },
+  TContext
+> => {
+  return useMutation(getEmitirNfceMutationOptions(options));
+};
+
+/**
  * @summary Update order status
  */
 export const getAtualizarStatusPedidoUrl = (id: number) => {
@@ -1332,3 +1506,419 @@ export function useRelatorioVendas<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all printers
+ */
+export const getListarImpressorasUrl = () => {
+  return `/api/impressoras`;
+};
+
+export const listarImpressoras = async (
+  options?: RequestInit,
+): Promise<Impressora[]> => {
+  return customFetch<Impressora[]>(getListarImpressorasUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListarImpressorasQueryKey = () => {
+  return [`/api/impressoras`] as const;
+};
+
+export const getListarImpressorasQueryOptions = <
+  TData = Awaited<ReturnType<typeof listarImpressoras>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listarImpressoras>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListarImpressorasQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listarImpressoras>>
+  > = ({ signal }) => listarImpressoras({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listarImpressoras>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListarImpressorasQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listarImpressoras>>
+>;
+export type ListarImpressorasQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all printers
+ */
+
+export function useListarImpressoras<
+  TData = Awaited<ReturnType<typeof listarImpressoras>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listarImpressoras>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListarImpressorasQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a printer
+ */
+export const getCriarImpressoraUrl = () => {
+  return `/api/impressoras`;
+};
+
+export const criarImpressora = async (
+  criarImpressoraInput: CriarImpressoraInput,
+  options?: RequestInit,
+): Promise<Impressora> => {
+  return customFetch<Impressora>(getCriarImpressoraUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(criarImpressoraInput),
+  });
+};
+
+export const getCriarImpressoraMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof criarImpressora>>,
+    TError,
+    { data: BodyType<CriarImpressoraInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof criarImpressora>>,
+  TError,
+  { data: BodyType<CriarImpressoraInput> },
+  TContext
+> => {
+  const mutationKey = ["criarImpressora"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof criarImpressora>>,
+    { data: BodyType<CriarImpressoraInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return criarImpressora(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CriarImpressoraMutationResult = NonNullable<
+  Awaited<ReturnType<typeof criarImpressora>>
+>;
+export type CriarImpressoraMutationBody = BodyType<CriarImpressoraInput>;
+export type CriarImpressoraMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a printer
+ */
+export const useCriarImpressora = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof criarImpressora>>,
+    TError,
+    { data: BodyType<CriarImpressoraInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof criarImpressora>>,
+  TError,
+  { data: BodyType<CriarImpressoraInput> },
+  TContext
+> => {
+  return useMutation(getCriarImpressoraMutationOptions(options));
+};
+
+/**
+ * @summary Update a printer
+ */
+export const getAtualizarImpressoraUrl = (id: number) => {
+  return `/api/impressoras/${id}`;
+};
+
+export const atualizarImpressora = async (
+  id: number,
+  criarImpressoraInput: CriarImpressoraInput,
+  options?: RequestInit,
+): Promise<Impressora> => {
+  return customFetch<Impressora>(getAtualizarImpressoraUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(criarImpressoraInput),
+  });
+};
+
+export const getAtualizarImpressoraMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof atualizarImpressora>>,
+    TError,
+    { id: number; data: BodyType<CriarImpressoraInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof atualizarImpressora>>,
+  TError,
+  { id: number; data: BodyType<CriarImpressoraInput> },
+  TContext
+> => {
+  const mutationKey = ["atualizarImpressora"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof atualizarImpressora>>,
+    { id: number; data: BodyType<CriarImpressoraInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return atualizarImpressora(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AtualizarImpressoraMutationResult = NonNullable<
+  Awaited<ReturnType<typeof atualizarImpressora>>
+>;
+export type AtualizarImpressoraMutationBody = BodyType<CriarImpressoraInput>;
+export type AtualizarImpressoraMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a printer
+ */
+export const useAtualizarImpressora = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof atualizarImpressora>>,
+    TError,
+    { id: number; data: BodyType<CriarImpressoraInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof atualizarImpressora>>,
+  TError,
+  { id: number; data: BodyType<CriarImpressoraInput> },
+  TContext
+> => {
+  return useMutation(getAtualizarImpressoraMutationOptions(options));
+};
+
+/**
+ * @summary Delete a printer
+ */
+export const getExcluirImpressoraUrl = (id: number) => {
+  return `/api/impressoras/${id}`;
+};
+
+export const excluirImpressora = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getExcluirImpressoraUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getExcluirImpressoraMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof excluirImpressora>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof excluirImpressora>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["excluirImpressora"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof excluirImpressora>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return excluirImpressora(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExcluirImpressoraMutationResult = NonNullable<
+  Awaited<ReturnType<typeof excluirImpressora>>
+>;
+
+export type ExcluirImpressoraMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a printer
+ */
+export const useExcluirImpressora = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof excluirImpressora>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof excluirImpressora>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getExcluirImpressoraMutationOptions(options));
+};
+
+/**
+ * @summary Print test page
+ */
+export const getTestarImpressoraUrl = (id: number) => {
+  return `/api/impressoras/${id}/test`;
+};
+
+export const testarImpressora = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getTestarImpressoraUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getTestarImpressoraMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testarImpressora>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof testarImpressora>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["testarImpressora"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof testarImpressora>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return testarImpressora(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TestarImpressoraMutationResult = NonNullable<
+  Awaited<ReturnType<typeof testarImpressora>>
+>;
+
+export type TestarImpressoraMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Print test page
+ */
+export const useTestarImpressora = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testarImpressora>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof testarImpressora>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getTestarImpressoraMutationOptions(options));
+};

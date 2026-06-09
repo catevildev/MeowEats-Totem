@@ -8,6 +8,7 @@
  * - STACK_DATABASE_URL — URL MySQL no host para drizzle push (default: 127.0.0.1:6010).
  */
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -73,6 +74,7 @@ async function waitMysqlReady(timeoutMs) {
 }
 
 async function main() {
+  fs.mkdirSync(path.join(root, "attached_assets"), { recursive: true });
   const withBuild = process.env.STACK_NO_BUILD !== "1";
   const buildNoCache = withBuild && process.env.STACK_BUILD_NO_CACHE === "1";
 
@@ -116,14 +118,14 @@ async function main() {
   const pnpm = pnpmCmd();
   let lastErr;
 
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 2; i++) {
     try {
       // --force: dev local; reconcilia BD após mudanças de schema.
       run(`${pnpm} --filter @workspace/db run push:dev`, { env });
       console.log("\n---");
       console.log("Stack Docker + schema aplicado.");
       console.log("Host DATABASE_URL (Drizzle / dev local):", dbUrl);
-      console.log("  Kiosk:     http://127.0.0.1:6001");
+      console.log("  Kiosk:     http://127.0.0.1:2302");
       console.log("  API:       http://127.0.0.1:6005");
       console.log("  MySQL:     127.0.0.1:6010");
       console.log(
@@ -137,7 +139,7 @@ async function main() {
     } catch (e) {
       lastErr = e;
       console.log(
-        `\ndrizzle push tentativa ${i + 1}/20 (MySQL a aquecer ou ligação instável)…`,
+        `\ndrizzle push tentativa ${i + 1}/2 (MySQL a aquecer ou ligação instável)…`,
       );
       if (e?.message) console.log(String(e.message));
       await sleep(3000);

@@ -101,26 +101,61 @@ router.post("/fiscal/nfce/emitir/:pedidoId", async (req, res) => {
   const pedidoId = parsePedidoId(req.params.pedidoId);
   if (!pedidoId) return res.status(400).json({ error: "pedidoId inválido" });
 
-  const payload = (req.body as { payload?: JsonObject }).payload;
-  if (!payload || typeof payload !== "object") {
-    return res.status(400).json({
-      error: "Body inválido. Envie { payload: {...dadosNfce} }.",
-    });
-  }
+  let payload = (req.body as { payload?: JsonObject }).payload;
 
   try {
-    const pedido = await db
-      .select({ id: pedidosTable.id })
-      .from(pedidosTable)
-      .where(eq(pedidosTable.id, pedidoId))
-      .limit(1)
-      .then((rows) => rows[0]);
+    const { getPedidoCompleto } = await import("./pedidos");
+    const { configuracaoTefTable } = await import("@workspace/db");
+    
+    const pedido = await getPedidoCompleto(pedidoId);
     if (!pedido) return res.status(404).json({ error: "Pedido não encontrado" });
+
+    const tefConfig = await db.select().from(configuracaoTefTable).limit(1).then(r => r[0]);
+    const emitenteCnpj = tefConfig?.empresaCnpj?.trim() ? tefConfig.empresaCnpj : "11111111111111";
 
     const idIntegracao = `pedido-${pedidoId}-${Date.now()}`;
     const ambiente = (process.env.PLUGNOTAS_AMBIENTE === "producao"
       ? "producao"
       : "sandbox") as "sandbox" | "producao";
+
+    if (!payload || Object.keys(payload).length === 0) {
+      // Auto-generate payload for sandbox / final consumer
+      payload = {
+        emissao: {
+          tipoAmbiente: ambiente === "producao" ? 1 : 2,
+          finalidade: 1,
+          consumidorFinal: true,
+          presencaComprador: 1
+        },
+        emitente: {
+          cpfCnpj: emitenteCnpj
+        },
+        destinatario: {
+          cpfCnpj: "99999999999",
+          nome: "CONSUMIDOR FINAL TESTE"
+        },
+        itens: pedido.itens.map((item, index) => ({
+          codigo: item.produtoId.toString(),
+          descricao: item.produto?.nome || `Item ${index + 1}`,
+          ncm: "21069090",
+          cfop: "5102",
+          valorUnitario: { comercial: item.preco },
+          quantidade: { comercial: item.quantidade },
+          tributos: {
+            icms: { origem: "0", cst: "40" },
+            pis: { cst: "07" },
+            cofins: { cst: "07" }
+          }
+        })),
+        pagamentos: [
+          { 
+            aVista: true, 
+            meio: pedido.formaPagamento === "credito" ? "03" : pedido.formaPagamento === "debito" ? "04" : "01", 
+            valor: pedido.total 
+          }
+        ]
+      };
+    }
 
     const docId = await runInsertWithLastId(async (dbi) => {
       await dbi.insert(fiscalDocumentsTable).values({

@@ -1,19 +1,81 @@
 import { Router, type IRouter } from "express";
 import { db, produtosTable, extrasTable, categoriasTable, runInsertWithLastId } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { normalizeProdutoImagem } from "../lib/produto-imagem";
 
 const router: IRouter = Router();
 
 async function getProdutoComExtras(id: number) {
   const produto = await db.select().from(produtosTable).where(eq(produtosTable.id, id)).then(r => r[0]);
   if (!produto) return null;
-  const extras = await db.select().from(extrasTable).where(eq(extrasTable.produtoId, id));
-  const categoria = await db.select().from(categoriasTable).where(eq(categoriasTable.id, produto.categoriaId)).then(r => r[0]);
+  const extras = await db
+    .select()
+    .from(extrasTable)
+    .where(eq(extrasTable.produtoId, id));
+  const categoria = await db
+    .select()
+    .from(categoriasTable)
+    .where(eq(categoriasTable.id, produto.categoriaId))
+    .then((r) => r[0]);
   return {
     ...produto,
     preco: parseFloat(produto.preco),
-    extras: extras.map(e => ({ ...e, preco: parseFloat(e.preco) })),
+    extras: extras
+      .map((e) => ({
+        ...e,
+        preco: parseFloat(e.preco),
+        grupoTitulo: e.grupoTitulo ?? "Opções",
+        modoSelecao: e.modoSelecao ?? "multipla",
+        maxSelecoes: e.maxSelecoes ?? 1,
+        obrigatorio: Boolean(e.obrigatorio),
+        ordemGrupo: e.ordemGrupo ?? 0,
+        ordemItem: e.ordemItem ?? 0,
+        imagem: e.imagem ?? null,
+      }))
+      .sort(
+        (a, b) =>
+          a.ordemGrupo - b.ordemGrupo || a.ordemItem - b.ordemItem,
+      ),
     categoria: categoria ?? null,
+  };
+}
+
+type ExtraInput = {
+  nome: string;
+  preco: number;
+  tipo: string;
+  grupoTitulo?: string;
+  modoSelecao?: string;
+  maxSelecoes?: number;
+  obrigatorio?: boolean;
+  ordemGrupo?: number;
+  ordemItem?: number;
+  imagem?: string | null;
+};
+
+function mapExtraInsert(produtoId: number, e: ExtraInput) {
+  let imagemUrl: string | null = null;
+  try {
+    imagemUrl = normalizeProdutoImagem(e.imagem);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Imagem da opção inválida";
+    throw new Error(msg);
+  }
+  return {
+    produtoId,
+    nome: e.nome,
+    preco: e.preco.toString(),
+    tipo: e.tipo as "adicional" | "remocao" | "tamanho",
+    grupoTitulo: e.grupoTitulo?.trim() || "Opções",
+    modoSelecao: (e.modoSelecao ?? "multipla") as
+      | "multipla"
+      | "unica"
+      | "sim_nao",
+    maxSelecoes: e.maxSelecoes ?? 1,
+    obrigatorio: e.obrigatorio ?? false,
+    ordemGrupo: e.ordemGrupo ?? 0,
+    ordemItem: e.ordemItem ?? 0,
+    imagem: imagemUrl,
   };
 }
 
@@ -57,35 +119,33 @@ router.post("/produtos", async (req, res) => {
       categoriaId,
       imagem,
       ativo,
-      ncm,
-      cfop,
-      origem,
-      cest,
       extras = [],
     } = req.body;
+    let imagemUrl: string | null;
+    try {
+      imagemUrl = normalizeProdutoImagem(imagem);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Imagem inválida";
+      return res.status(400).json({ error: msg });
+    }
     const produtoId = await runInsertWithLastId(async (dbi) => {
       await dbi.insert(produtosTable).values({
         nome,
         descricao,
         preco: preco.toString(),
         categoriaId,
-        imagem,
+        imagem: imagemUrl,
         ativo: ativo ?? true,
-        ncm: (ncm ?? "00000000").toString(),
-        cfop: (cfop ?? "5102").toString(),
-        origem: (origem ?? "0").toString(),
-        cest: cest ? cest.toString() : null,
+        ncm: "00000000",
+        cfop: "5102",
+        origem: "0",
+        cest: null,
       });
     });
 
     if (extras.length > 0) {
       await db.insert(extrasTable).values(
-        extras.map((e: { nome: string; preco: number; tipo: string }) => ({
-          produtoId: produtoId,
-          nome: e.nome,
-          preco: e.preco.toString(),
-          tipo: e.tipo,
-        }))
+        extras.map((e: ExtraInput) => mapExtraInsert(produtoId, e)),
       );
     }
 
@@ -93,7 +153,9 @@ router.post("/produtos", async (req, res) => {
     res.status(201).json(result);
   } catch (err) {
     req.log.error({ err }, "Error creating produto");
-    res.status(500).json({ error: "Erro interno" });
+    const msg = err instanceof Error ? err.message : "Erro interno";
+    const status = msg.includes("base64") || msg.includes("URL") ? 400 : 500;
+    res.status(status).json({ error: status === 400 ? msg : "Erro interno" });
   }
 });
 
@@ -107,23 +169,22 @@ router.put("/produtos/:id", async (req, res) => {
       categoriaId,
       imagem,
       ativo,
-      ncm,
-      cfop,
-      origem,
-      cest,
       extras = [],
     } = req.body;
+    let imagemUrl: string | null;
+    try {
+      imagemUrl = normalizeProdutoImagem(imagem);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Imagem inválida";
+      return res.status(400).json({ error: msg });
+    }
     await db.update(produtosTable).set({
       nome,
       descricao,
       preco: preco.toString(),
       categoriaId,
-      imagem,
+      imagem: imagemUrl,
       ativo,
-      ncm: (ncm ?? "00000000").toString(),
-      cfop: (cfop ?? "5102").toString(),
-      origem: (origem ?? "0").toString(),
-      cest: cest ? cest.toString() : null,
     }).where(eq(produtosTable.id, id));
     const produto = await db
       .select()
@@ -135,12 +196,7 @@ router.put("/produtos/:id", async (req, res) => {
     await db.delete(extrasTable).where(eq(extrasTable.produtoId, id));
     if (extras.length > 0) {
       await db.insert(extrasTable).values(
-        extras.map((e: { nome: string; preco: number; tipo: string }) => ({
-          produtoId: id,
-          nome: e.nome,
-          preco: e.preco.toString(),
-          tipo: e.tipo,
-        }))
+        extras.map((e: ExtraInput) => mapExtraInsert(id, e)),
       );
     }
 

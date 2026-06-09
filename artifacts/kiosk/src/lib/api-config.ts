@@ -1,26 +1,30 @@
 /**
- * Base da API no browser.
- * - Dev local (Vite): deixe VITE_API_URL vazio → rotas relativas /api/* (proxy do vite.config).
- * - Vercel + Lightsail: VITE_API_URL=https://sua-api:6005 (sem barra no final).
+ * URLs da API e mídia em desenvolvimento local.
+ * Com base vazia, pedidos usam o mesmo host (proxy Vite ou Docker em /api).
  */
+
 export function getApiBaseUrl(): string | null {
-  const raw = import.meta.env.VITE_API_URL?.trim();
-  if (!raw) return null;
-  return raw.replace(/\/+$/, "");
+  return null;
 }
 
 export function apiUrl(path: string): string {
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  const base = getApiBaseUrl();
-  return base ? `${base}${normalized}` : normalized;
+  return path.startsWith("/") ? path : `/${path}`;
 }
 
-/** Caminhos /api/uploads/... ou URLs absolutas vindas do banco. */
 export function resolveMediaUrl(
   url: string | null | undefined,
 ): string | undefined {
   if (!url?.trim()) return undefined;
-  const trimmed = url.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return apiUrl(trimmed);
+  const u = url.trim();
+  if (
+    u.startsWith("http://") ||
+    u.startsWith("https://") ||
+    u.startsWith("data:")
+  ) {
+    return u;
+  }
+  if (u.startsWith("/api/")) return u;
+  if (u.startsWith("/uploads/")) return `/api${u}`;
+  if (u.startsWith("/")) return u;
+  return u;
 }
