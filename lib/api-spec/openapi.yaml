@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Api
+  title: API
   version: 0.1.0
   description: Restaurant Self-Service Kiosk API
 servers:
@@ -8,21 +8,21 @@ servers:
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+    description: Verificação de saúde da aplicação
   - name: categorias
-    description: Product categories
+    description: Gerenciamento de categorias de produtos
   - name: produtos
-    description: Products
+    description: Gerenciamento de produtos
   - name: pedidos
-    description: Orders
+    description: Gerenciamento de pedidos
   - name: impressoras
-    description: Printers
+    description: Gerenciamento de impressoras
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
-      summary: Health check
+      tags: [ health ]
+      summary: Status de Saúde da API
       responses:
         "200":
           description: Healthy
@@ -30,12 +30,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+      description: Verifica o status de saúde da API. Usado por balanceadores de carga e monitores de uptime para garantir que
+        o sistema está online.
 
   /categorias:
     get:
       operationId: listarCategorias
-      tags: [categorias]
-      summary: List all categories
+      tags: [ categorias ]
+      summary: Listar todas as categorias
       responses:
         "200":
           description: List of categories
@@ -45,10 +47,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Categoria"
+      description: Recupera a lista de todas as categorias de produtos. Útil para montar o menu de navegação do Kiosk e a tela
+        de listagem do painel Administrativo.
     post:
       operationId: criarCategoria
-      tags: [categorias]
-      summary: Create a category
+      tags: [ categorias ]
+      summary: Criar nova categoria
       requestBody:
         required: true
         content:
@@ -62,12 +66,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Categoria"
+      description: "Cadastra uma nova categoria no banco de dados. Categorias agrupam produtos (ex: Lanches, Bebidas) e
+        facilitam a navegação do cliente."
 
   /categorias/{id}:
     put:
       operationId: atualizarCategoria
-      tags: [categorias]
-      summary: Update a category
+      tags: [ categorias ]
+      summary: Atualizar categoria
       parameters:
         - name: id
           in: path
@@ -87,10 +93,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Categoria"
+      description: Atualiza os dados de uma categoria existente (nome, ordem de exibição, foto, etc).
     delete:
       operationId: excluirCategoria
-      tags: [categorias]
-      summary: Delete a category
+      tags: [ categorias ]
+      summary: Excluir categoria
       parameters:
         - name: id
           in: path
@@ -100,12 +107,14 @@ paths:
       responses:
         "204":
           description: Category deleted
+      description: "Remove permanentemente uma categoria do sistema. Nota: Produtos atrelados podem precisar ser reatribuídos
+        a outra categoria."
 
   /produtos:
     get:
       operationId: listarProdutos
-      tags: [produtos]
-      summary: List all products
+      tags: [ produtos ]
+      summary: Listar todos os produtos
       parameters:
         - name: categoria
           in: query
@@ -126,10 +135,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Produto"
+      description: Lista todos os produtos do cardápio. Permite filtragem por categoria e status (ativo/inativo). Usado
+        pesadamente na tela principal do Kiosk.
     post:
       operationId: criarProduto
-      tags: [produtos]
-      summary: Create a product
+      tags: [ produtos ]
+      summary: Cadastrar novo produto
       requestBody:
         required: true
         content:
@@ -143,12 +154,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Produto"
+      description: Adiciona um novo produto ao catálogo. Inclui informações vitais como preço, nome, imagem, descrição e
+        adicionais permitidos.
 
   /produtos/{id}:
     get:
       operationId: buscarProduto
-      tags: [produtos]
-      summary: Get a product by ID
+      tags: [ produtos ]
+      summary: Buscar produto por ID
       parameters:
         - name: id
           in: path
@@ -164,10 +177,12 @@ paths:
                 $ref: "#/components/schemas/Produto"
         "404":
           description: Product not found
+      description: Retorna todos os detalhes de um produto específico através do seu ID, incluindo os itens extras/adicionais
+        vinculados para personalização.
     put:
       operationId: atualizarProduto
-      tags: [produtos]
-      summary: Update a product
+      tags: [ produtos ]
+      summary: Atualizar produto
       parameters:
         - name: id
           in: path
@@ -187,10 +202,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Produto"
+      description: Edita as informações de um produto existente, permitindo alteração rápida de preço, nome ou troca de imagem.
     delete:
       operationId: excluirProduto
-      tags: [produtos]
-      summary: Delete a product
+      tags: [ produtos ]
+      summary: Excluir produto
       parameters:
         - name: id
           in: path
@@ -200,19 +216,21 @@ paths:
       responses:
         "204":
           description: Product deleted
+      description: Deleta um produto do sistema. Caso o produto já esteja em pedidos antigos, o histórico de relatórios de
+        pedidos será mantido intacto.
 
   /pedidos:
     get:
       operationId: listarPedidos
-      tags: [pedidos]
-      summary: List all orders
+      tags: [ pedidos ]
+      summary: Listar histórico de pedidos
       parameters:
         - name: status
           in: query
           required: false
           schema:
             type: string
-            enum: [novo, em_preparo, pronto, entregue, cancelado]
+            enum: [ novo, em_preparo, pronto, entregue, cancelado ]
         - name: data
           in: query
           required: false
@@ -227,10 +245,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Pedido"
+      description: Busca o histórico de pedidos realizados. Pode ser filtrado por status (Novo, Em Preparo, Pronto) para
+        popular perfeitamente as telas da Cozinha e Painel de TV.
     post:
       operationId: criarPedido
-      tags: [pedidos]
-      summary: Create a new order
+      tags: [ pedidos ]
+      summary: Criar novo pedido
       requestBody:
         required: true
         content:
@@ -244,12 +264,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Pedido"
+      description: Registra e finaliza um novo pedido feito pelo Kiosk. Salva todos os itens, adicionais, gera o número
+        sequencial do pedido e dispara a impressão na cozinha instantaneamente.
 
   /pedidos/{id}:
     get:
       operationId: buscarPedido
-      tags: [pedidos]
-      summary: Get an order by ID
+      tags: [ pedidos ]
+      summary: Buscar pedido por ID
       parameters:
         - name: id
           in: path
@@ -263,12 +285,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Pedido"
+      description: Recupera o detalhamento completo de um único pedido pelo ID, incluindo todos os produtos selecionados e a
+        forma de pagamento aprovada.
 
   /pedidos/{id}/imprimir:
     post:
       operationId: imprimirPedido
-      tags: [pedidos]
-      summary: Re-print an order receipt
+      tags: [ pedidos ]
+      summary: Reimprimir comanda do pedido
       parameters:
         - name: id
           in: path
@@ -278,12 +302,13 @@ paths:
       responses:
         "200":
           description: Print successful
-          
+      description: Envia um comando para a impressora térmica ativa para reimprimir a nota (comanda) de um pedido já existente.
+
   /fiscal/nfce/emitir/{pedidoId}:
     post:
       operationId: emitirNfce
-      tags: [fiscal]
-      summary: Emitir NFC-e para um pedido
+      tags: [ fiscal ]
+      summary: Emitir NFC-e (PlugNotas)
       parameters:
         - name: pedidoId
           in: path
@@ -304,12 +329,14 @@ paths:
           description: Emissão aceita ou em processamento
         "500":
           description: Internal server error
+      description: Gera e emite a Nota Fiscal de Consumidor Eletrônica (NFC-e) para um pedido específico junto à SEFAZ via
+        integração com a API da PlugNotas.
 
   /pedidos/{id}/status:
     patch:
       operationId: atualizarStatusPedido
-      tags: [pedidos]
-      summary: Update order status
+      tags: [ pedidos ]
+      summary: Atualizar status do pedido
       parameters:
         - name: id
           in: path
@@ -329,11 +356,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Pedido"
+      description: "Avança o status de um pedido no fluxo de trabalho. Ex: Move de 'Novo' para 'Em Preparo' ou 'Pronto'.
+        Atualiza as telas da Cozinha e TV em tempo real."
 
   /relatorios/vendas:
     get:
       operationId: relatorioVendas
-      tags: [pedidos]
+      tags: [ pedidos ]
       summary: Sales report
       parameters:
         - name: data
@@ -348,12 +377,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RelatorioVendas"
+      description: Sales report. Rota de manipulação de dados (GET) exposta pela API do Totem.
 
   /impressoras:
     get:
       operationId: listarImpressoras
-      tags: [impressoras]
-      summary: List all printers
+      tags: [ impressoras ]
+      summary: Listar impressoras cadastradas
       responses:
         "200":
           description: List of printers
@@ -363,10 +393,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Impressora"
+      description: Lista as configurações de impressoras térmicas salvas no sistema, verificando quais estão ativas, além de
+        seus IPs e larguras de papel (58mm/80mm).
     post:
       operationId: criarImpressora
-      tags: [impressoras]
-      summary: Create a printer
+      tags: [ impressoras ]
+      summary: Cadastrar nova impressora
       requestBody:
         required: true
         content:
@@ -380,12 +412,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Impressora"
+      description: Cadastra uma nova impressora térmica de rede (IP ou USB) para impressão automática de comandas e senhas
+        para os clientes.
 
   /impressoras/{id}:
     put:
       operationId: atualizarImpressora
-      tags: [impressoras]
-      summary: Update a printer
+      tags: [ impressoras ]
+      summary: Atualizar impressora
       parameters:
         - name: id
           in: path
@@ -405,10 +439,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Impressora"
+      description: Edita as configurações de uma impressora existente (endereço IP, largura do papel, se está ativa ou inativa).
     delete:
       operationId: excluirImpressora
-      tags: [impressoras]
-      summary: Delete a printer
+      tags: [ impressoras ]
+      summary: Excluir impressora
       parameters:
         - name: id
           in: path
@@ -418,11 +453,13 @@ paths:
       responses:
         "204":
           description: Printer deleted
+      description: Deleta uma impressora do sistema. As impressões passarão a buscar outra impressora ativa caso exista no
+        banco de dados.
 
   /impressoras/{id}/test:
     post:
       operationId: testarImpressora
-      tags: [impressoras]
+      tags: [ impressoras ]
       summary: Print test page
       parameters:
         - name: id
@@ -433,6 +470,7 @@ paths:
       responses:
         "200":
           description: Test successful
+      description: Print test page. Rota de manipulação de dados (POST) exposta pela API do Totem.
 
 components:
   schemas:
@@ -526,12 +564,12 @@ components:
           type: number
         tipo:
           type: string
-          enum: [adicional, remocao, tamanho]
+          enum: [ adicional, remocao, tamanho ]
         grupoTitulo:
           type: string
         modoSelecao:
           type: string
-          enum: [multipla, unica, sim_nao]
+          enum: [ multipla, unica, sim_nao ]
         maxSelecoes:
           type: integer
         obrigatorio:
@@ -592,12 +630,12 @@ components:
           type: number
         tipo:
           type: string
-          enum: [adicional, remocao, tamanho]
+          enum: [ adicional, remocao, tamanho ]
         grupoTitulo:
           type: string
         modoSelecao:
           type: string
-          enum: [multipla, unica, sim_nao]
+          enum: [ multipla, unica, sim_nao ]
         maxSelecoes:
           type: integer
         obrigatorio:
@@ -673,15 +711,15 @@ components:
           type: string
         status:
           type: string
-          enum: [novo, em_preparo, pronto, entregue, cancelado]
+          enum: [ novo, em_preparo, pronto, entregue, cancelado ]
         total:
           type: number
         tipoPedido:
           type: string
-          enum: [comer_aqui, para_viagem]
+          enum: [ comer_aqui, para_viagem ]
         formaPagamento:
           type: string
-          enum: [credito, debito, pix, nfc]
+          enum: [ credito, debito, pix, nfc ]
           nullable: true
         criadoEm:
           type: string
@@ -703,10 +741,10 @@ components:
       properties:
         tipoPedido:
           type: string
-          enum: [comer_aqui, para_viagem]
+          enum: [ comer_aqui, para_viagem ]
         formaPagamento:
           type: string
-          enum: [credito, debito, pix, nfc]
+          enum: [ credito, debito, pix, nfc ]
         itens:
           type: array
           items:
@@ -721,7 +759,7 @@ components:
       properties:
         status:
           type: string
-          enum: [novo, em_preparo, pronto, entregue, cancelado]
+          enum: [ novo, em_preparo, pronto, entregue, cancelado ]
       required:
         - status
 
@@ -786,12 +824,12 @@ components:
           type: string
         tipoConexao:
           type: string
-          enum: [rede, usb]
+          enum: [ rede, usb ]
         endereco:
           type: string
         larguraPapel:
           type: string
-          enum: [80mm, 58mm]
+          enum: [ 80mm, 58mm ]
         margemEsquerda:
           type: integer
         margemDireita:
@@ -821,12 +859,12 @@ components:
           type: string
         tipoConexao:
           type: string
-          enum: [rede, usb]
+          enum: [ rede, usb ]
         endereco:
           type: string
         larguraPapel:
           type: string
-          enum: [80mm, 58mm]
+          enum: [ 80mm, 58mm ]
         margemEsquerda:
           type: integer
         margemDireita:
