@@ -5,7 +5,8 @@ import {
   pedidosTable,
   runInsertWithLastId,
 } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lt } from "drizzle-orm";
+import { getDateRangeBounds } from "./pedidos";
 
 const router: IRouter = Router();
 
@@ -22,7 +23,7 @@ function mapPagamento(
 
 router.get("/pagamentos", async (req, res) => {
   try {
-    const { statusPagamento } = req.query;
+    const { statusPagamento, dataInicio, dataFim } = req.query;
     const conditions = [];
     if (statusPagamento) {
       conditions.push(
@@ -30,6 +31,19 @@ router.get("/pagamentos", async (req, res) => {
           pagamentosTefTable.statusPagamento,
           statusPagamento as "pendente" | "aprovado" | "cancelado" | "negado",
         ),
+      );
+    }
+    
+    if (dataInicio || dataFim) {
+      const { start, end } = getDateRangeBounds(
+        typeof dataInicio === "string" ? dataInicio : undefined,
+        typeof dataFim === "string" ? dataFim : undefined
+      );
+      conditions.push(
+        and(
+          gte(pagamentosTefTable.criadoEm, start),
+          lt(pagamentosTefTable.criadoEm, end)
+        )!
       );
     }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { Link } from "wouter";
 import { AdminLayout } from "./AdminLayout";
 import { formatCurrency } from "@/lib/utils";
@@ -33,13 +34,13 @@ export default function AdminPagamentos() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [selecionado, setSelecionado] = useState<PagamentoTef | null>(null);
+  const [dataInicio, setDataInicio] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [dataFim, setDataFim] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
   const {
     paginatedData,
     searchQuery,
     setSearchQuery,
-    dateFilter,
-    setDateFilter,
     currentPage,
     setPage,
     itemsPerPage,
@@ -48,14 +49,7 @@ export default function AdminPagamentos() {
     totalItems,
   } = useClientTable({
     data: lista,
-    filterFn: (item, query, dFilter) => {
-      // Date filter
-      if (dFilter) {
-        // Assume item.criadoEm is ISO string. Compare YYYY-MM-DD.
-        const itemDate = new Date(item.criadoEm).toISOString().split('T')[0];
-        if (itemDate !== dFilter) return false;
-      }
-      
+    filterFn: (item, query) => {
       const q = query.toLowerCase();
       if (!q) return true;
       if (item.pedidoNumero?.toLowerCase().includes(q)) return true;
@@ -69,10 +63,14 @@ export default function AdminPagamentos() {
     setLoading(true);
     setErro(null);
     try {
-      const data =
-        filtro === "todos"
-          ? await listarPagamentos()
-          : await listarPagamentos(filtro);
+      const startDate = dataInicio || undefined;
+      const endDate = dataFim || undefined;
+      
+      const data = await listarPagamentos(
+        filtro === "todos" ? undefined : filtro,
+        startDate,
+        endDate
+      );
       setLista(data);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao carregar");
@@ -83,7 +81,7 @@ export default function AdminPagamentos() {
 
   useEffect(() => {
     carregar();
-  }, [filtro]);
+  }, [filtro, dataInicio, dataFim]);
 
   return (
     <AdminLayout>
@@ -116,9 +114,11 @@ export default function AdminPagamentos() {
         <TableToolbar 
           searchQuery={searchQuery} 
           setSearchQuery={setSearchQuery} 
-          dateFilter={dateFilter}
-          setDateFilter={setDateFilter}
-          searchPlaceholder="Buscar por pedido ou ID da transação..." 
+          dataInicio={dataInicio}
+          setDataInicio={setDataInicio}
+          dataFim={dataFim}
+          setDataFim={setDataFim}
+          searchPlaceholder="Buscar por ID do pedido ou autorização..." 
         />
 
         {erro && (

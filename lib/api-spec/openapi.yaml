@@ -231,7 +231,12 @@ paths:
           schema:
             type: string
             enum: [ novo, em_preparo, pronto, entregue, cancelado ]
-        - name: data
+        - name: dataInicio
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dataFim
           in: query
           required: false
           schema:
@@ -365,7 +370,12 @@ paths:
       tags: [ pedidos ]
       summary: Sales report
       parameters:
-        - name: data
+        - name: dataInicio
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dataFim
           in: query
           required: false
           schema:

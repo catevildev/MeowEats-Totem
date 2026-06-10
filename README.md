@@ -1,6 +1,6 @@
 <div align="center">
   <img src="https://img.icons8.com/color/150/000000/restaurant-menu.png" alt="MeowEats Logo" width="150"/>
-  <h1>🐱 MeowEats Order Manager</h1>
+  <h1>MeowEats Order Manager</h1>
   <p><strong>Sistema Completo de Autoatendimento e Gestão para Restaurantes</strong></p>
 
   <p>
@@ -24,10 +24,10 @@ O **MeowEats** é um sistema Kiosk (Totem) de autoatendimento construído de pon
 
 | Módulo | Tela Principal | Descrição |
 |--------|---------------|-----------|
-| **Totem do Cliente** | <img src="https://placehold.co/400x250?text=Totem+Cliente" width="400"/> | Fluxo completo onde o cliente escolhe os produtos, adicionais, revisa o carrinho e realiza o pagamento via TEF ou NFC. |
-| **Painel da Cozinha** | <img src="https://placehold.co/400x250?text=Painel+da+Cozinha" width="400"/> | Sistema Kanban interativo (*drag-and-drop*) separando pedidos em: **Novos**, **Em Preparo** e **Prontos**. |
-| **Painel da TV** | <img src="https://placehold.co/400x250?text=Painel+da+TV" width="400"/> | Tela pública com design Premium (Glassmorphism e alertas sonoros) para chamar os clientes quando o pedido estiver pronto. |
-| **Dashboard Admin** | <img src="https://placehold.co/400x250?text=Dashboard+Admin" width="400"/> | Gerenciamento de cardápio, relatórios de vendas, histórico de pedidos, cadastro de categorias e configurações de hardware. |
+| **Totem do Cliente** | <img src="https://raw.githubusercontent.com/catevildev/MeowEats-Totem/main/artifacts/kiosk/public/telas/kiosk.png" width="400" alt="Totem do Cliente"/> | Fluxo completo onde o cliente escolhe os produtos, adicionais, revisa o carrinho e realiza o pagamento via TEF ou NFC. |
+| **Painel da Cozinha** | <img src="https://raw.githubusercontent.com/catevildev/MeowEats-Totem/main/artifacts/kiosk/public/telas/cozinha.png" width="400" alt="Painel da Cozinha"/> | Sistema Kanban interativo (*drag-and-drop*) separando pedidos em: **Novos**, **Em Preparo** e **Prontos**. |
+| **Painel da TV** | <img src="https://raw.githubusercontent.com/catevildev/MeowEats-Totem/main/artifacts/kiosk/public/telas/tv.png" width="400" alt="Painel da TV"/> | Tela pública com design Premium (Glassmorphism e alertas sonoros) para chamar os clientes quando o pedido estiver pronto. |
+| **Dashboard Admin** | <img src="https://raw.githubusercontent.com/catevildev/MeowEats-Totem/main/artifacts/kiosk/public/telas/dash.png" width="400" alt="Dashboard Admin"/> | Gerenciamento de cardápio, relatórios de vendas, histórico de pedidos, cadastro de categorias e configurações de hardware. |
 
 ---
 

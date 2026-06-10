@@ -9,5 +9,6 @@ import type { ListarPedidosStatus } from "./listarPedidosStatus";
 
 export type ListarPedidosParams = {
   status?: ListarPedidosStatus;
-  data?: string;
+  dataInicio?: string;
+  dataFim?: string;
 };

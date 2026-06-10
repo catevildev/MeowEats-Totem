@@ -75,8 +75,14 @@ export async function atualizarPagamento(
 
 export async function listarPagamentos(
   statusPagamento?: PagamentoTef["statusPagamento"],
+  dataInicio?: string,
+  dataFim?: string
 ): Promise<PagamentoTef[]> {
-  const q = statusPagamento ? `?statusPagamento=${statusPagamento}` : "";
+  const params = new URLSearchParams();
+  if (statusPagamento) params.append("statusPagamento", statusPagamento);
+  if (dataInicio) params.append("dataInicio", dataInicio);
+  if (dataFim) params.append("dataFim", dataFim);
+  const q = params.toString() ? `?${params.toString()}` : "";
   const res = await fetch(apiUrl(`/api/pagamentos${q}`));
   if (!res.ok) throw new Error("Falha ao listar pagamentos");
   return res.json();

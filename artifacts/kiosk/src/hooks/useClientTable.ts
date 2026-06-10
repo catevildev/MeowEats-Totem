@@ -1,22 +1,23 @@
 import { useState, useMemo } from "react";
+import { DateRange } from "react-day-picker";
 
 interface UseClientTableProps<T> {
   data: T[] | undefined;
-  filterFn?: (item: T, query: string, dateFilter: string) => boolean;
+  filterFn?: (item: T, query: string, dateRange: DateRange | undefined) => boolean;
   initialItemsPerPage?: number;
 }
 
 export function useClientTable<T>({ data = [], filterFn, initialItemsPerPage = 10 }: UseClientTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
 
   const filteredData = useMemo(() => {
-    if (!searchQuery && !dateFilter && !filterFn) return data;
+    if (!searchQuery && !dateRange && !filterFn) return data;
     const query = searchQuery.toLowerCase();
-    return filterFn ? data.filter((item) => filterFn(item, query, dateFilter)) : data;
-  }, [data, searchQuery, dateFilter, filterFn]);
+    return filterFn ? data.filter((item) => filterFn(item, query, dateRange)) : data;
+  }, [data, searchQuery, dateRange, filterFn]);
 
   const totalItems = filteredData.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
@@ -42,8 +43,8 @@ export function useClientTable<T>({ data = [], filterFn, initialItemsPerPage = 1
     paginatedData,
     searchQuery,
     setSearchQuery,
-    dateFilter,
-    setDateFilter,
+    dateRange,
+    setDateRange,
     currentPage,
     setPage,
     itemsPerPage,

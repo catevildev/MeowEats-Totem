@@ -7,5 +7,6 @@
  */
 
 export type RelatorioVendasParams = {
-  data?: string;
+  dataInicio?: string;
+  dataFim?: string;
 };

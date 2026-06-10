@@ -15,22 +15,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { NativeDatePicker } from "./ui/native-date-picker";
 import { Search } from "lucide-react";
+
 
 interface TableToolbarProps {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   searchPlaceholder?: string;
-  dateFilter?: string;
-  setDateFilter?: (val: string) => void;
+  dataInicio?: string;
+  setDataInicio?: (val: string) => void;
+  dataFim?: string;
+  setDataFim?: (val: string) => void;
+  children?: React.ReactNode;
 }
 
 export function TableToolbar({ 
   searchQuery, 
   setSearchQuery, 
   searchPlaceholder = "Buscar...",
-  dateFilter,
-  setDateFilter
+  dataInicio,
+  setDataInicio,
+  dataFim,
+  setDataFim,
+  children
 }: TableToolbarProps) {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
@@ -44,14 +52,31 @@ export function TableToolbar({
         />
       </div>
       
-      {setDateFilter && (
+      {(setDataInicio || setDataFim) && (
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          {setDataInicio && (
+            <NativeDatePicker
+              value={dataInicio || ""}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="w-full sm:w-auto min-w-[150px]"
+              title="Data Início"
+            />
+          )}
+          <span className="text-muted-foreground text-sm font-medium">até</span>
+          {setDataFim && (
+            <NativeDatePicker
+              value={dataFim || ""}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="w-full sm:w-auto min-w-[150px]"
+              title="Data Fim"
+            />
+          )}
+        </div>
+      )}
+      
+      {children && (
         <div className="w-full sm:w-auto shrink-0">
-          <Input
-            type="date"
-            value={dateFilter || ""}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full sm:w-auto"
-          />
+          {children}
         </div>
       )}
     </div>

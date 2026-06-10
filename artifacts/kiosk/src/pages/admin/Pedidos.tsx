@@ -1,4 +1,5 @@
 import { useListarPedidos } from "@workspace/api-client-react";
+
 import { AdminLayout } from "./AdminLayout";
 import { formatCurrency } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -7,7 +8,13 @@ import * as React from "react";
 import { useClientTable } from "@/hooks/useClientTable";
 import { TablePagination, TableToolbar } from "@/components/TablePagination";
 export default function AdminPedidos() {
-  const { data: pedidos, isLoading } = useListarPedidos();
+  const [dataInicio, setDataInicio] = React.useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [dataFim, setDataFim] = React.useState<string>(format(new Date(), "yyyy-MM-dd"));
+
+  const { data: pedidos, isLoading } = useListarPedidos({
+    dataInicio: dataInicio || undefined,
+    dataFim: dataFim || undefined
+  });
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -33,8 +40,6 @@ export default function AdminPedidos() {
     paginatedData,
     searchQuery,
     setSearchQuery,
-    dateFilter,
-    setDateFilter,
     currentPage,
     setPage,
     itemsPerPage,
@@ -43,11 +48,7 @@ export default function AdminPedidos() {
     totalItems,
   } = useClientTable({
     data: sortedPedidos,
-    filterFn: (item, query, dFilter) => {
-      if (dFilter) {
-        const itemDate = new Date(item.criadoEm).toISOString().split('T')[0];
-        if (itemDate !== dFilter) return false;
-      }
+    filterFn: (item, query) => {
       
       const q = query.toLowerCase();
       if (!q) return true;
@@ -74,8 +75,10 @@ export default function AdminPedidos() {
             <TableToolbar 
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery} 
-              dateFilter={dateFilter}
-              setDateFilter={setDateFilter}
+              dataInicio={dataInicio}
+              setDataInicio={setDataInicio}
+              dataFim={dataFim}
+              setDataFim={setDataFim}
               searchPlaceholder="Buscar por número do pedido ou produto..." 
             />
             <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">

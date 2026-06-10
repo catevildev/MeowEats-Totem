@@ -3,23 +3,26 @@ import { db, pedidosTable, itensPedidoTable, produtosTable, extrasTable, runInse
 import { eq, and, sql, desc, gte, lt, ne, inArray } from "drizzle-orm";
 import { imprimirReciboPedido } from "../lib/printer";
 
-function getDayBounds(dataParam?: string): { start: Date; end: Date } {
-  let y: number;
-  let m: number;
-  let d: number;
-
-  if (dataParam && /^\d{4}-\d{2}-\d{2}$/.test(dataParam)) {
-    [y, m, d] = dataParam.split("-").map(Number);
-  } else {
-    const now = new Date();
-    y = now.getFullYear();
-    m = now.getMonth() + 1;
-    d = now.getDate();
+export function getDateRangeBounds(dataInicio?: string, dataFim?: string): { start: Date; end: Date } {
+  const now = new Date();
+  
+  let startY = now.getFullYear(), startM = now.getMonth(), startD = now.getDate();
+  if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) {
+    const [y, m, d] = dataInicio.split("-").map(Number);
+    startY = y; startM = m - 1; startD = d;
+  }
+  
+  let endY = now.getFullYear(), endM = now.getMonth(), endD = now.getDate();
+  if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) {
+    const [y, m, d] = dataFim.split("-").map(Number);
+    endY = y; endM = m - 1; endD = d;
+  } else if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) {
+    endY = startY; endM = startM; endD = startD;
   }
 
   return {
-    start: new Date(y, m - 1, d, 0, 0, 0, 0),
-    end: new Date(y, m - 1, d + 1, 0, 0, 0, 0),
+    start: new Date(startY, startM, startD, 0, 0, 0, 0),
+    end: new Date(endY, endM, endD + 1, 0, 0, 0, 0),
   };
 }
 
@@ -79,15 +82,19 @@ export async function getPedidoCompleto(id: number) {
 
 router.get("/pedidos", async (req, res) => {
   try {
-    const { status, data } = req.query;
+    const { status, dataInicio, dataFim } = req.query;
     const conditions = [];
     if (status) conditions.push(eq(pedidosTable.status, status as string));
-    if (data) {
-      const startDate = new Date(data as string);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(data as string);
-      endDate.setHours(23, 59, 59, 999);
-      conditions.push(sql`${pedidosTable.criadoEm} >= ${startDate} AND ${pedidosTable.criadoEm} <= ${endDate}`);
+    
+    if (dataInicio || dataFim) {
+      const { start, end } = getDateRangeBounds(
+        typeof dataInicio === "string" ? dataInicio : undefined,
+        typeof dataFim === "string" ? dataFim : undefined
+      );
+      conditions.push(and(
+        gte(pedidosTable.criadoEm, start),
+        lt(pedidosTable.criadoEm, end)
+      )!);
     }
 
     const pedidos = conditions.length > 0
@@ -215,9 +222,10 @@ router.post("/pedidos/:id/imprimir", async (req, res) => {
 
 router.get("/relatorios/vendas", async (req, res) => {
   try {
-    const { data } = req.query;
-    const { start, end } = getDayBounds(
-      typeof data === "string" ? data : undefined,
+    const { dataInicio, dataFim } = req.query;
+    const { start, end } = getDateRangeBounds(
+      typeof dataInicio === "string" ? dataInicio : undefined,
+      typeof dataFim === "string" ? dataFim : undefined
     );
 
     const pedidos = await db.select().from(pedidosTable).where(

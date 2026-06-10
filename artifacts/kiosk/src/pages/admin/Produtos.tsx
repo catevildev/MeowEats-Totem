@@ -90,6 +90,7 @@ export default function AdminProdutos() {
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [imagemArquivo, setImagemArquivo] = useState<File | null>(null);
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const criarProduto = useCriarProduto();
   const atualizarProduto = useAtualizarProduto();
@@ -124,7 +125,11 @@ export default function AdminProdutos() {
   } = useClientTable({
     data: produtos,
     filterFn: (item, query) => {
+      if (categoryFilter !== "all" && item.categoriaId.toString() !== categoryFilter) {
+        return false;
+      }
       const q = query.toLowerCase();
+      if (!q) return true;
       if (item.nome?.toLowerCase().includes(q)) return true;
       if (item.descricao?.toLowerCase().includes(q)) return true;
       const cat = categorias?.find(c => c.id === item.categoriaId);
@@ -899,7 +904,20 @@ export default function AdminProdutos() {
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery} 
               searchPlaceholder="Buscar por nome, descrição ou categoria..." 
-            />
+            >
+              <select
+                className="flex h-10 w-full sm:w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="all">Todas as Categorias</option>
+                {categoriasOrdenadas.map((cat) => (
+                  <option key={cat.id} value={cat.id.toString()}>
+                    {cat.nome}
+                  </option>
+                ))}
+              </select>
+            </TableToolbar>
             <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">

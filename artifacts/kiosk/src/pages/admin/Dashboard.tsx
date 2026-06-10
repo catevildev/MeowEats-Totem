@@ -1,14 +1,22 @@
+import { useState } from "react";
+import { parseISO, format } from "date-fns";
 import { useRelatorioVendas } from "@workspace/api-client-react";
 import { AdminLayout } from "./AdminLayout";
+import { NativeDatePicker } from "@/components/ui/native-date-picker";
 import { formatCurrency } from "@/lib/utils";
 import { DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { format } from "date-fns";
+
 
 export default function AdminDashboard() {
-  const hoje = format(new Date(), "yyyy-MM-dd");
-  const { data: stats, isLoading } = useRelatorioVendas({ data: hoje });
+  const [dataInicio, setDataInicio] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [dataFim, setDataFim] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  const { data: stats, isLoading } = useRelatorioVendas({ 
+    dataInicio,
+    dataFim
+  });
 
   if (isLoading) return <AdminLayout><LoadingSpinner /></AdminLayout>;
 
@@ -17,16 +25,43 @@ export default function AdminDashboard() {
   const ticketMedio = stats?.ticketMedio ?? 0;
   const chartData = stats?.vendasPorHora ?? [];
   const produtos = stats?.produtosMaisVendidos ?? [];
-  const dataLabel = format(new Date(), "dd/MM/yyyy");
+  
+  let dataLabel = "Hoje";
+  if (dataInicio === dataFim) {
+    dataLabel = format(parseISO(dataInicio), "dd/MM/yyyy");
+  } else if (dataInicio && dataFim) {
+    dataLabel = `${format(parseISO(dataInicio), "dd/MM/yyyy")} a ${format(parseISO(dataFim), "dd/MM/yyyy")}`;
+  } else if (dataInicio) {
+    dataLabel = `A partir de ${format(parseISO(dataInicio), "dd/MM/yyyy")}`;
+  } else if (dataFim) {
+    dataLabel = `Até ${format(parseISO(dataFim), "dd/MM/yyyy")}`;
+  }
 
   return (
     <AdminLayout>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Visão geral do dia ({dataLabel}) — pedidos não cancelados
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Visão geral do dia ({dataLabel}) — pedidos não cancelados
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <NativeDatePicker
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="w-full sm:w-auto min-w-[150px]"
+              title="Data Início"
+            />
+            <span className="text-muted-foreground text-sm font-medium">até</span>
+            <NativeDatePicker
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="w-full sm:w-auto min-w-[150px]"
+              title="Data Fim"
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">

@@ -44,7 +44,8 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * @summary Health check
+ * Verifica o status de saúde da API. Usado por balanceadores de carga e monitores de uptime para garantir que o sistema está online.
+ * @summary Status de Saúde da API
  */
 export const getHealthCheckUrl = () => {
   return `/api/healthz`;
@@ -95,7 +96,7 @@ export type HealthCheckQueryResult = NonNullable<
 export type HealthCheckQueryError = ErrorType<unknown>;
 
 /**
- * @summary Health check
+ * @summary Status de Saúde da API
  */
 
 export function useHealthCheck<
@@ -119,7 +120,8 @@ export function useHealthCheck<
 }
 
 /**
- * @summary List all categories
+ * Recupera a lista de todas as categorias de produtos. Útil para montar o menu de navegação do Kiosk e a tela de listagem do painel Administrativo.
+ * @summary Listar todas as categorias
  */
 export const getListarCategoriasUrl = () => {
   return `/api/categorias`;
@@ -170,7 +172,7 @@ export type ListarCategoriasQueryResult = NonNullable<
 export type ListarCategoriasQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all categories
+ * @summary Listar todas as categorias
  */
 
 export function useListarCategorias<
@@ -194,7 +196,8 @@ export function useListarCategorias<
 }
 
 /**
- * @summary Create a category
+ * Cadastra uma nova categoria no banco de dados. Categorias agrupam produtos (ex: Lanches, Bebidas) e facilitam a navegação do cliente.
+ * @summary Criar nova categoria
  */
 export const getCriarCategoriaUrl = () => {
   return `/api/categorias`;
@@ -257,7 +260,7 @@ export type CriarCategoriaMutationBody = BodyType<CriarCategoriaInput>;
 export type CriarCategoriaMutationError = ErrorType<unknown>;
 
 /**
- * @summary Create a category
+ * @summary Criar nova categoria
  */
 export const useCriarCategoria = <
   TError = ErrorType<unknown>,
@@ -280,7 +283,8 @@ export const useCriarCategoria = <
 };
 
 /**
- * @summary Update a category
+ * Atualiza os dados de uma categoria existente (nome, ordem de exibição, foto, etc).
+ * @summary Atualizar categoria
  */
 export const getAtualizarCategoriaUrl = (id: number) => {
   return `/api/categorias/${id}`;
@@ -344,7 +348,7 @@ export type AtualizarCategoriaMutationBody = BodyType<CriarCategoriaInput>;
 export type AtualizarCategoriaMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update a category
+ * @summary Atualizar categoria
  */
 export const useAtualizarCategoria = <
   TError = ErrorType<unknown>,
@@ -367,7 +371,8 @@ export const useAtualizarCategoria = <
 };
 
 /**
- * @summary Delete a category
+ * Remove permanentemente uma categoria do sistema. Nota: Produtos atrelados podem precisar ser reatribuídos a outra categoria.
+ * @summary Excluir categoria
  */
 export const getExcluirCategoriaUrl = (id: number) => {
   return `/api/categorias/${id}`;
@@ -428,7 +433,7 @@ export type ExcluirCategoriaMutationResult = NonNullable<
 export type ExcluirCategoriaMutationError = ErrorType<unknown>;
 
 /**
- * @summary Delete a category
+ * @summary Excluir categoria
  */
 export const useExcluirCategoria = <
   TError = ErrorType<unknown>,
@@ -451,7 +456,8 @@ export const useExcluirCategoria = <
 };
 
 /**
- * @summary List all products
+ * Lista todos os produtos do cardápio. Permite filtragem por categoria e status (ativo/inativo). Usado pesadamente na tela principal do Kiosk.
+ * @summary Listar todos os produtos
  */
 export const getListarProdutosUrl = (params?: ListarProdutosParams) => {
   const normalizedParams = new URLSearchParams();
@@ -518,7 +524,7 @@ export type ListarProdutosQueryResult = NonNullable<
 export type ListarProdutosQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all products
+ * @summary Listar todos os produtos
  */
 
 export function useListarProdutos<
@@ -545,7 +551,8 @@ export function useListarProdutos<
 }
 
 /**
- * @summary Create a product
+ * Adiciona um novo produto ao catálogo. Inclui informações vitais como preço, nome, imagem, descrição e adicionais permitidos.
+ * @summary Cadastrar novo produto
  */
 export const getCriarProdutoUrl = () => {
   return `/api/produtos`;
@@ -608,7 +615,7 @@ export type CriarProdutoMutationBody = BodyType<CriarProdutoInput>;
 export type CriarProdutoMutationError = ErrorType<unknown>;
 
 /**
- * @summary Create a product
+ * @summary Cadastrar novo produto
  */
 export const useCriarProduto = <
   TError = ErrorType<unknown>,
@@ -631,7 +638,8 @@ export const useCriarProduto = <
 };
 
 /**
- * @summary Get a product by ID
+ * Retorna todos os detalhes de um produto específico através do seu ID, incluindo os itens extras/adicionais vinculados para personalização.
+ * @summary Buscar produto por ID
  */
 export const getBuscarProdutoUrl = (id: number) => {
   return `/api/produtos/${id}`;
@@ -691,7 +699,7 @@ export type BuscarProdutoQueryResult = NonNullable<
 export type BuscarProdutoQueryError = ErrorType<void>;
 
 /**
- * @summary Get a product by ID
+ * @summary Buscar produto por ID
  */
 
 export function useBuscarProduto<
@@ -718,7 +726,8 @@ export function useBuscarProduto<
 }
 
 /**
- * @summary Update a product
+ * Edita as informações de um produto existente, permitindo alteração rápida de preço, nome ou troca de imagem.
+ * @summary Atualizar produto
  */
 export const getAtualizarProdutoUrl = (id: number) => {
   return `/api/produtos/${id}`;
@@ -782,7 +791,7 @@ export type AtualizarProdutoMutationBody = BodyType<CriarProdutoInput>;
 export type AtualizarProdutoMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update a product
+ * @summary Atualizar produto
  */
 export const useAtualizarProduto = <
   TError = ErrorType<unknown>,
@@ -805,7 +814,8 @@ export const useAtualizarProduto = <
 };
 
 /**
- * @summary Delete a product
+ * Deleta um produto do sistema. Caso o produto já esteja em pedidos antigos, o histórico de relatórios de pedidos será mantido intacto.
+ * @summary Excluir produto
  */
 export const getExcluirProdutoUrl = (id: number) => {
   return `/api/produtos/${id}`;
@@ -866,7 +876,7 @@ export type ExcluirProdutoMutationResult = NonNullable<
 export type ExcluirProdutoMutationError = ErrorType<unknown>;
 
 /**
- * @summary Delete a product
+ * @summary Excluir produto
  */
 export const useExcluirProduto = <
   TError = ErrorType<unknown>,
@@ -889,7 +899,8 @@ export const useExcluirProduto = <
 };
 
 /**
- * @summary List all orders
+ * Busca o histórico de pedidos realizados. Pode ser filtrado por status (Novo, Em Preparo, Pronto) para popular perfeitamente as telas da Cozinha e Painel de TV.
+ * @summary Listar histórico de pedidos
  */
 export const getListarPedidosUrl = (params?: ListarPedidosParams) => {
   const normalizedParams = new URLSearchParams();
@@ -956,7 +967,7 @@ export type ListarPedidosQueryResult = NonNullable<
 export type ListarPedidosQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all orders
+ * @summary Listar histórico de pedidos
  */
 
 export function useListarPedidos<
@@ -983,7 +994,8 @@ export function useListarPedidos<
 }
 
 /**
- * @summary Create a new order
+ * Registra e finaliza um novo pedido feito pelo Kiosk. Salva todos os itens, adicionais, gera o número sequencial do pedido e dispara a impressão na cozinha instantaneamente.
+ * @summary Criar novo pedido
  */
 export const getCriarPedidoUrl = () => {
   return `/api/pedidos`;
@@ -1046,7 +1058,7 @@ export type CriarPedidoMutationBody = BodyType<CriarPedidoInput>;
 export type CriarPedidoMutationError = ErrorType<unknown>;
 
 /**
- * @summary Create a new order
+ * @summary Criar novo pedido
  */
 export const useCriarPedido = <
   TError = ErrorType<unknown>,
@@ -1069,7 +1081,8 @@ export const useCriarPedido = <
 };
 
 /**
- * @summary Get an order by ID
+ * Recupera o detalhamento completo de um único pedido pelo ID, incluindo todos os produtos selecionados e a forma de pagamento aprovada.
+ * @summary Buscar pedido por ID
  */
 export const getBuscarPedidoUrl = (id: number) => {
   return `/api/pedidos/${id}`;
@@ -1129,7 +1142,7 @@ export type BuscarPedidoQueryResult = NonNullable<
 export type BuscarPedidoQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get an order by ID
+ * @summary Buscar pedido por ID
  */
 
 export function useBuscarPedido<
@@ -1156,7 +1169,8 @@ export function useBuscarPedido<
 }
 
 /**
- * @summary Re-print an order receipt
+ * Envia um comando para a impressora térmica ativa para reimprimir a nota (comanda) de um pedido já existente.
+ * @summary Reimprimir comanda do pedido
  */
 export const getImprimirPedidoUrl = (id: number) => {
   return `/api/pedidos/${id}/imprimir`;
@@ -1217,7 +1231,7 @@ export type ImprimirPedidoMutationResult = NonNullable<
 export type ImprimirPedidoMutationError = ErrorType<unknown>;
 
 /**
- * @summary Re-print an order receipt
+ * @summary Reimprimir comanda do pedido
  */
 export const useImprimirPedido = <
   TError = ErrorType<unknown>,
@@ -1240,7 +1254,8 @@ export const useImprimirPedido = <
 };
 
 /**
- * @summary Emitir NFC-e para um pedido
+ * Gera e emite a Nota Fiscal de Consumidor Eletrônica (NFC-e) para um pedido específico junto à SEFAZ via integração com a API da PlugNotas.
+ * @summary Emitir NFC-e (PlugNotas)
  */
 export const getEmitirNfceUrl = (pedidoId: number) => {
   return `/api/fiscal/nfce/emitir/${pedidoId}`;
@@ -1304,7 +1319,7 @@ export type EmitirNfceMutationBody = BodyType<EmitirNfceBody>;
 export type EmitirNfceMutationError = ErrorType<void>;
 
 /**
- * @summary Emitir NFC-e para um pedido
+ * @summary Emitir NFC-e (PlugNotas)
  */
 export const useEmitirNfce = <
   TError = ErrorType<void>,
@@ -1327,7 +1342,8 @@ export const useEmitirNfce = <
 };
 
 /**
- * @summary Update order status
+ * Avança o status de um pedido no fluxo de trabalho. Ex: Move de 'Novo' para 'Em Preparo' ou 'Pronto'. Atualiza as telas da Cozinha e TV em tempo real.
+ * @summary Atualizar status do pedido
  */
 export const getAtualizarStatusPedidoUrl = (id: number) => {
   return `/api/pedidos/${id}/status`;
@@ -1391,7 +1407,7 @@ export type AtualizarStatusPedidoMutationBody = BodyType<AtualizarStatusInput>;
 export type AtualizarStatusPedidoMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update order status
+ * @summary Atualizar status do pedido
  */
 export const useAtualizarStatusPedido = <
   TError = ErrorType<unknown>,
@@ -1414,6 +1430,7 @@ export const useAtualizarStatusPedido = <
 };
 
 /**
+ * Sales report. Rota de manipulação de dados (GET) exposta pela API do Totem.
  * @summary Sales report
  */
 export const getRelatorioVendasUrl = (params?: RelatorioVendasParams) => {
@@ -1508,7 +1525,8 @@ export function useRelatorioVendas<
 }
 
 /**
- * @summary List all printers
+ * Lista as configurações de impressoras térmicas salvas no sistema, verificando quais estão ativas, além de seus IPs e larguras de papel (58mm/80mm).
+ * @summary Listar impressoras cadastradas
  */
 export const getListarImpressorasUrl = () => {
   return `/api/impressoras`;
@@ -1559,7 +1577,7 @@ export type ListarImpressorasQueryResult = NonNullable<
 export type ListarImpressorasQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all printers
+ * @summary Listar impressoras cadastradas
  */
 
 export function useListarImpressoras<
@@ -1583,7 +1601,8 @@ export function useListarImpressoras<
 }
 
 /**
- * @summary Create a printer
+ * Cadastra uma nova impressora térmica de rede (IP ou USB) para impressão automática de comandas e senhas para os clientes.
+ * @summary Cadastrar nova impressora
  */
 export const getCriarImpressoraUrl = () => {
   return `/api/impressoras`;
@@ -1646,7 +1665,7 @@ export type CriarImpressoraMutationBody = BodyType<CriarImpressoraInput>;
 export type CriarImpressoraMutationError = ErrorType<unknown>;
 
 /**
- * @summary Create a printer
+ * @summary Cadastrar nova impressora
  */
 export const useCriarImpressora = <
   TError = ErrorType<unknown>,
@@ -1669,7 +1688,8 @@ export const useCriarImpressora = <
 };
 
 /**
- * @summary Update a printer
+ * Edita as configurações de uma impressora existente (endereço IP, largura do papel, se está ativa ou inativa).
+ * @summary Atualizar impressora
  */
 export const getAtualizarImpressoraUrl = (id: number) => {
   return `/api/impressoras/${id}`;
@@ -1733,7 +1753,7 @@ export type AtualizarImpressoraMutationBody = BodyType<CriarImpressoraInput>;
 export type AtualizarImpressoraMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update a printer
+ * @summary Atualizar impressora
  */
 export const useAtualizarImpressora = <
   TError = ErrorType<unknown>,
@@ -1756,7 +1776,8 @@ export const useAtualizarImpressora = <
 };
 
 /**
- * @summary Delete a printer
+ * Deleta uma impressora do sistema. As impressões passarão a buscar outra impressora ativa caso exista no banco de dados.
+ * @summary Excluir impressora
  */
 export const getExcluirImpressoraUrl = (id: number) => {
   return `/api/impressoras/${id}`;
@@ -1817,7 +1838,7 @@ export type ExcluirImpressoraMutationResult = NonNullable<
 export type ExcluirImpressoraMutationError = ErrorType<unknown>;
 
 /**
- * @summary Delete a printer
+ * @summary Excluir impressora
  */
 export const useExcluirImpressora = <
   TError = ErrorType<unknown>,
@@ -1840,6 +1861,7 @@ export const useExcluirImpressora = <
 };
 
 /**
+ * Print test page. Rota de manipulação de dados (POST) exposta pela API do Totem.
  * @summary Print test page
  */
 export const getTestarImpressoraUrl = (id: number) => {

@@ -288,7 +288,8 @@ export type ListarProdutosParams = {
 
 export type ListarPedidosParams = {
   status?: ListarPedidosStatus;
-  data?: string;
+  dataInicio?: string;
+  dataFim?: string;
 };
 
 export type ListarPedidosStatus =
@@ -309,5 +310,6 @@ export type EmitirNfceBody = {
 };
 
 export type RelatorioVendasParams = {
-  data?: string;
+  dataInicio?: string;
+  dataFim?: string;
 };

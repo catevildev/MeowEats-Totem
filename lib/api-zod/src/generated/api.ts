@@ -8,14 +8,16 @@
 import * as zod from "zod";
 
 /**
- * @summary Health check
+ * Verifica o status de saúde da API. Usado por balanceadores de carga e monitores de uptime para garantir que o sistema está online.
+ * @summary Status de Saúde da API
  */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
 
 /**
- * @summary List all categories
+ * Recupera a lista de todas as categorias de produtos. Útil para montar o menu de navegação do Kiosk e a tela de listagem do painel Administrativo.
+ * @summary Listar todas as categorias
  */
 export const ListarCategoriasResponseItem = zod.object({
   id: zod.number(),
@@ -27,7 +29,8 @@ export const ListarCategoriasResponseItem = zod.object({
 export const ListarCategoriasResponse = zod.array(ListarCategoriasResponseItem);
 
 /**
- * @summary Create a category
+ * Cadastra uma nova categoria no banco de dados. Categorias agrupam produtos (ex: Lanches, Bebidas) e facilitam a navegação do cliente.
+ * @summary Criar nova categoria
  */
 export const CriarCategoriaBody = zod.object({
   nome: zod.string(),
@@ -37,7 +40,8 @@ export const CriarCategoriaBody = zod.object({
 });
 
 /**
- * @summary Update a category
+ * Atualiza os dados de uma categoria existente (nome, ordem de exibição, foto, etc).
+ * @summary Atualizar categoria
  */
 export const AtualizarCategoriaParams = zod.object({
   id: zod.coerce.number(),
@@ -59,14 +63,16 @@ export const AtualizarCategoriaResponse = zod.object({
 });
 
 /**
- * @summary Delete a category
+ * Remove permanentemente uma categoria do sistema. Nota: Produtos atrelados podem precisar ser reatribuídos a outra categoria.
+ * @summary Excluir categoria
  */
 export const ExcluirCategoriaParams = zod.object({
   id: zod.coerce.number(),
 });
 
 /**
- * @summary List all products
+ * Lista todos os produtos do cardápio. Permite filtragem por categoria e status (ativo/inativo). Usado pesadamente na tela principal do Kiosk.
+ * @summary Listar todos os produtos
  */
 export const ListarProdutosQueryParams = zod.object({
   categoria: zod.coerce.number().optional(),
@@ -112,7 +118,8 @@ export const ListarProdutosResponseItem = zod.object({
 export const ListarProdutosResponse = zod.array(ListarProdutosResponseItem);
 
 /**
- * @summary Create a product
+ * Adiciona um novo produto ao catálogo. Inclui informações vitais como preço, nome, imagem, descrição e adicionais permitidos.
+ * @summary Cadastrar novo produto
  */
 export const CriarProdutoBody = zod.object({
   nome: zod.string(),
@@ -140,7 +147,8 @@ export const CriarProdutoBody = zod.object({
 });
 
 /**
- * @summary Get a product by ID
+ * Retorna todos os detalhes de um produto específico através do seu ID, incluindo os itens extras/adicionais vinculados para personalização.
+ * @summary Buscar produto por ID
  */
 export const BuscarProdutoParams = zod.object({
   id: zod.coerce.number(),
@@ -184,7 +192,8 @@ export const BuscarProdutoResponse = zod.object({
 });
 
 /**
- * @summary Update a product
+ * Edita as informações de um produto existente, permitindo alteração rápida de preço, nome ou troca de imagem.
+ * @summary Atualizar produto
  */
 export const AtualizarProdutoParams = zod.object({
   id: zod.coerce.number(),
@@ -253,20 +262,23 @@ export const AtualizarProdutoResponse = zod.object({
 });
 
 /**
- * @summary Delete a product
+ * Deleta um produto do sistema. Caso o produto já esteja em pedidos antigos, o histórico de relatórios de pedidos será mantido intacto.
+ * @summary Excluir produto
  */
 export const ExcluirProdutoParams = zod.object({
   id: zod.coerce.number(),
 });
 
 /**
- * @summary List all orders
+ * Busca o histórico de pedidos realizados. Pode ser filtrado por status (Novo, Em Preparo, Pronto) para popular perfeitamente as telas da Cozinha e Painel de TV.
+ * @summary Listar histórico de pedidos
  */
 export const ListarPedidosQueryParams = zod.object({
   status: zod
     .enum(["novo", "em_preparo", "pronto", "entregue", "cancelado"])
     .optional(),
-  data: zod.coerce.string().optional(),
+  dataInicio: zod.coerce.string().optional(),
+  dataFim: zod.coerce.string().optional(),
 });
 
 export const ListarPedidosResponseItem = zod.object({
@@ -332,7 +344,8 @@ export const ListarPedidosResponseItem = zod.object({
 export const ListarPedidosResponse = zod.array(ListarPedidosResponseItem);
 
 /**
- * @summary Create a new order
+ * Registra e finaliza um novo pedido feito pelo Kiosk. Salva todos os itens, adicionais, gera o número sequencial do pedido e dispara a impressão na cozinha instantaneamente.
+ * @summary Criar novo pedido
  */
 export const CriarPedidoBody = zod.object({
   tipoPedido: zod.enum(["comer_aqui", "para_viagem"]),
@@ -348,7 +361,8 @@ export const CriarPedidoBody = zod.object({
 });
 
 /**
- * @summary Get an order by ID
+ * Recupera o detalhamento completo de um único pedido pelo ID, incluindo todos os produtos selecionados e a forma de pagamento aprovada.
+ * @summary Buscar pedido por ID
  */
 export const BuscarPedidoParams = zod.object({
   id: zod.coerce.number(),
@@ -416,14 +430,16 @@ export const BuscarPedidoResponse = zod.object({
 });
 
 /**
- * @summary Re-print an order receipt
+ * Envia um comando para a impressora térmica ativa para reimprimir a nota (comanda) de um pedido já existente.
+ * @summary Reimprimir comanda do pedido
  */
 export const ImprimirPedidoParams = zod.object({
   id: zod.coerce.number(),
 });
 
 /**
- * @summary Emitir NFC-e para um pedido
+ * Gera e emite a Nota Fiscal de Consumidor Eletrônica (NFC-e) para um pedido específico junto à SEFAZ via integração com a API da PlugNotas.
+ * @summary Emitir NFC-e (PlugNotas)
  */
 export const EmitirNfceParams = zod.object({
   pedidoId: zod.coerce.number(),
@@ -434,7 +450,8 @@ export const EmitirNfceBody = zod.object({
 });
 
 /**
- * @summary Update order status
+ * Avança o status de um pedido no fluxo de trabalho. Ex: Move de 'Novo' para 'Em Preparo' ou 'Pronto'. Atualiza as telas da Cozinha e TV em tempo real.
+ * @summary Atualizar status do pedido
  */
 export const AtualizarStatusPedidoParams = zod.object({
   id: zod.coerce.number(),
@@ -506,10 +523,12 @@ export const AtualizarStatusPedidoResponse = zod.object({
 });
 
 /**
+ * Sales report. Rota de manipulação de dados (GET) exposta pela API do Totem.
  * @summary Sales report
  */
 export const RelatorioVendasQueryParams = zod.object({
-  data: zod.coerce.string().optional(),
+  dataInicio: zod.coerce.string().optional(),
+  dataFim: zod.coerce.string().optional(),
 });
 
 export const RelatorioVendasResponse = zod.object({
@@ -533,7 +552,8 @@ export const RelatorioVendasResponse = zod.object({
 });
 
 /**
- * @summary List all printers
+ * Lista as configurações de impressoras térmicas salvas no sistema, verificando quais estão ativas, além de seus IPs e larguras de papel (58mm/80mm).
+ * @summary Listar impressoras cadastradas
  */
 export const ListarImpressorasResponseItem = zod.object({
   id: zod.number(),
@@ -552,7 +572,8 @@ export const ListarImpressorasResponse = zod.array(
 );
 
 /**
- * @summary Create a printer
+ * Cadastra uma nova impressora térmica de rede (IP ou USB) para impressão automática de comandas e senhas para os clientes.
+ * @summary Cadastrar nova impressora
  */
 export const CriarImpressoraBody = zod.object({
   nome: zod.string(),
@@ -565,7 +586,8 @@ export const CriarImpressoraBody = zod.object({
 });
 
 /**
- * @summary Update a printer
+ * Edita as configurações de uma impressora existente (endereço IP, largura do papel, se está ativa ou inativa).
+ * @summary Atualizar impressora
  */
 export const AtualizarImpressoraParams = zod.object({
   id: zod.coerce.number(),
@@ -595,13 +617,15 @@ export const AtualizarImpressoraResponse = zod.object({
 });
 
 /**
- * @summary Delete a printer
+ * Deleta uma impressora do sistema. As impressões passarão a buscar outra impressora ativa caso exista no banco de dados.
+ * @summary Excluir impressora
  */
 export const ExcluirImpressoraParams = zod.object({
   id: zod.coerce.number(),
 });
 
 /**
+ * Print test page. Rota de manipulação de dados (POST) exposta pela API do Totem.
  * @summary Print test page
  */
 export const TestarImpressoraParams = zod.object({
