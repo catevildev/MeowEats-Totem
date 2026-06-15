@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <StandardNavbar />
-      <div className="flex-1 flex w-full">
-        <aside className="w-64 border-r bg-card/50 hidden md:block py-8 px-4">
+      <div className="flex-1 flex w-full overflow-hidden">
+        <aside className="w-64 border-r bg-card/50 hidden md:block py-8 px-4 overflow-y-auto">
           <nav className="space-y-6">
             
             <div>
@@ -44,7 +44,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
           </nav>
         </aside>
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

@@ -117,7 +117,7 @@ export default function AdminTefConfig() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6 w-full max-w-7xl">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Configuração TEF / Loja</h1>
           <p className="text-muted-foreground">
@@ -172,9 +172,9 @@ export default function AdminTefConfig() {
           </div>
         ) : null}
 
-        <form onSubmit={onSubmit} className="bg-card border rounded-2xl p-6 space-y-4">
+        <form onSubmit={onSubmit} className="bg-card border rounded-2xl p-6 space-y-4 shadow-sm">
           <h2 className="font-semibold text-lg">SiTef / Loja</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <Field label="IP do Gerenciador SiTef">
               <input
                 className={inputCls}
@@ -219,7 +219,7 @@ export default function AdminTefConfig() {
                 onChange={(e) => setConfig({ ...config, pinPadPorta: e.target.value })}
               />
             </Field>
-            <Field label="Mensagem no visor do PinPad" className="sm:col-span-2">
+            <Field label="Mensagem no visor do PinPad" className="sm:col-span-2 lg:col-span-3 xl:col-span-4">
               <input
                 className={`${inputCls} font-mono`}
                 maxLength={32}
@@ -257,7 +257,7 @@ export default function AdminTefConfig() {
           </label>
 
           <h2 className="font-semibold text-lg pt-4">Ponte local (MeowEats.TefBridge)</h2>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Field label="URL HTTP">
               <input
                 className={inputCls}
