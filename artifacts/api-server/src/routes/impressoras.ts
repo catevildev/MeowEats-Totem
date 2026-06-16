@@ -74,15 +74,17 @@ router.post("/impressoras/:id/test", async (req, res) => {
 
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON,
-      interface: impressora.tipoConexao === "rede" ? `tcp://${impressora.endereco}` : `printer:${impressora.endereco}`,
+      interface: impressora.tipoConexao === "rede" ? `tcp://${impressora.endereco}` : `tcp://0.0.0.0:9999`,
       options: {
         timeout: 3000
       }
     });
 
-    const isConnected = await printer.isPrinterConnected();
-    if (!isConnected) {
-      return res.status(400).json({ error: "Impressora não está acessível no endereço informado." });
+    if (impressora.tipoConexao === "rede") {
+      const isConnected = await printer.isPrinterConnected();
+      if (!isConnected) {
+        return res.status(400).json({ error: "Impressora não está acessível no endereço informado." });
+      }
     }
 
     printer.alignCenter();
@@ -101,7 +103,27 @@ router.post("/impressoras/:id/test", async (req, res) => {
     printer.cut();
     printer.beep();
     
-    await printer.execute();
+    if (impressora.tipoConexao === "usb") {
+      const buffer = printer.getBuffer();
+      const base64 = buffer.toString('base64');
+      const bridgeUrl = process.env.TEF_BRIDGE_HTTP_URL || "http://host.docker.internal:5099";
+      
+      const resBridge = await fetch(`${bridgeUrl}/tef/print`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          printerName: impressora.endereco,
+          dataBase64: base64
+        })
+      });
+      
+      if (!resBridge.ok) {
+         const errData = await resBridge.text();
+         throw new Error(`Falha na ponte de impressão local: ${errData}`);
+      }
+    } else {
+      await printer.execute();
+    }
     res.json({ success: true, message: "Teste enviado com sucesso" });
   } catch (err) {
     req.log.error({ err }, "Erro ao testar impressora");

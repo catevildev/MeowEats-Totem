@@ -30,7 +30,7 @@ export async function imprimirReciboPedido(pedido: PedidoCompleto) {
       try {
         const printer = new ThermalPrinter({
           type: PrinterTypes.EPSON,
-          interface: config.tipoConexao === "rede" ? `tcp://${config.endereco}` : `printer:${config.endereco}`,
+          interface: config.tipoConexao === "rede" ? `tcp://${config.endereco}` : `tcp://0.0.0.0:9999`,
           characterSet: CharacterSet.PC858_EURO,
           removeSpecialCharacters: false,
           lineCharacter: "-",
@@ -41,10 +41,12 @@ export async function imprimirReciboPedido(pedido: PedidoCompleto) {
           }
         });
 
-        const isConnected = await printer.isPrinterConnected();
-        if (!isConnected) {
-          console.error(`Impressora ${config.nome} (${config.endereco}) não está conectada.`);
-          continue;
+        if (config.tipoConexao === "rede") {
+          const isConnected = await printer.isPrinterConnected();
+          if (!isConnected) {
+            console.error(`Impressora ${config.nome} (${config.endereco}) não está conectada.`);
+            continue;
+          }
         }
 
         printer.alignCenter();
@@ -108,7 +110,28 @@ export async function imprimirReciboPedido(pedido: PedidoCompleto) {
         printer.cut();
         printer.beep();
         
-        await printer.execute();
+        if (config.tipoConexao === "usb") {
+          const buffer = printer.getBuffer();
+          const base64 = buffer.toString('base64');
+          const bridgeUrl = process.env.TEF_BRIDGE_HTTP_URL || "http://host.docker.internal:5099";
+          
+          const res = await fetch(`${bridgeUrl}/tef/print`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              printerName: config.endereco,
+              dataBase64: base64
+            })
+          });
+          
+          if (!res.ok) {
+             const errData = await res.text();
+             throw new Error(`Falha na ponte de impressão local: ${errData}`);
+          }
+        } else {
+          await printer.execute();
+        }
+        
         console.log(`Recibo ${pedido.numero} impresso na impressora: ${config.nome}`);
       } catch (err) {
         console.error(`Erro ao tentar imprimir na impressora ${config.nome}:`, err);
